@@ -1,6 +1,7 @@
 {
-  "name": "CivicAI",
-  "short_name": "CivicAI",
+  "name": "ChronicAi",
+  "short_name": "ChronicAi",
+  "short_name": "Civi",
   "description": "AI-powered citizen-government connection for civic reporting and support.",
   "start_url": "/",
   "display": "standalone",

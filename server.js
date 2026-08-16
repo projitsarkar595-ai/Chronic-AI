@@ -1,8 +1,8 @@
 // ============================================================
-// CIVICAI — FINAL COMPLETE SERVER.JS
+// ChronicAi — FINAL COMPLETE SERVER.JS
 // ============================================================
 //
-// CIVICAI BACKEND
+// ChronicAi BACKEND
 //
 // AI ARCHITECTURE
 // ------------------------------------------------------------
@@ -13,7 +13,7 @@
 // AUTHORITY ASSISTANT   -> GROQ
 // IMAGE CHAT            -> GROQ VISION
 //
-// CIVIC REPORT ANALYSIS -> GEMINI
+// ChronicAi REPORT ANALYSIS -> GEMINI
 // PRODUCT SCANNER       -> GEMINI
 //
 // EMAIL OTP             -> GMAIL / NODEMAILER

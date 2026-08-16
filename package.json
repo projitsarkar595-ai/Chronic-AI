@@ -1,7 +1,7 @@
 {
-  "name": "civicai",
+  "name": "ChronicAi",
   "version": "1.0.0",
-  "description": "CivicAI - AI powered civic complaint analysis and authority routing system",
+  "description": "ChronicAi - AI powered civic complaint analysis and authority routing system",
   "type": "module",
   "main": "server.js",
   "scripts": {

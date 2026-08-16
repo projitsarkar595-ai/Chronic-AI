@@ -1,5 +1,5 @@
 // ============================================================
-// CIVICAI — REGISTER / CREATE CITIZEN ACCOUNT
+// ChronicAi — REGISTER / CREATE CITIZEN ACCOUNT
 // ============================================================
 // FLOW:
 //

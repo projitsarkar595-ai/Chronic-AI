@@ -1,8 +1,8 @@
 /* =========================================================
-   CIVICAI — MAIN FRONTEND JAVASCRIPT
+    Chronicai — MAIN FRONTEND JAVASCRIPT
    Complete Frontend Controller
    UI + Animation + Theme + Navigation
-   + CivicAI Backend / Groq AI Connection
+   +  Chronicai Backend / Groq AI Connection
 ========================================================= */
 
 "use strict";

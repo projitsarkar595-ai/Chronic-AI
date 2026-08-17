@@ -4,17 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 
-<title> ChronicAi — AI Life Helper</title>
+<title>CivicAI — AI Life Helper</title>
 
 <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
 >
-<link
-        rel="icon"
-        type="image/svg+xml"
-        href="icon.svg"
->
+
 <style>
 
 *{
@@ -453,7 +449,7 @@ button{
         );
 
     -webkit-background-clip:text;
-    background-clip:text;
+
     color:transparent;
 }
 
@@ -1777,27 +1773,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /* =========================================================
        CIVICAI LIFE HELPER
-       FIXED VOICE SYSTEM
+       COMPLETE CORRECTED VERSION
 
-       FIXES:
-       ✓ Stable microphone ON/OFF
-       ✓ No SpeechRecognition auto-restart loop
-       ✓ MediaRecorder based microphone
-       ✓ Groq Whisper transcription
-       ✓ Automatic spoken-language detection
-       ✓ Bengali -> Bengali input
-       ✓ English -> English input
-       ✓ Hindi -> Hindi input
-       ✓ Banglish preserved when Whisper returns it
-       ✓ ~2 sec silence after speech -> automatically submit
-       ✓ ~7 sec total silence -> microphone OFF
-       ✓ AI replies spoken aloud
-       ✓ Correct TTS language
-       ✓ AI animation while speaking
-       ✓ Voice mode stays active after AI reply
-       ✓ Text input always remains usable
-       ✓ Image chat preserved
-       ✓ Local conversation history preserved
+       FIXED:
+       ✓ Text chat
+       ✓ Image chat
+       ✓ Camera
+       ✓ Voice input
+       ✓ MediaRecorder
+       ✓ Groq Whisper through backend
+       ✓ Bengali / English / Hindi detection
+       ✓ Banglish preserved
+       ✓ Automatic voice submission
+       ✓ AI voice reply
+       ✓ Voice mode remains ON
+       ✓ Microphone restarts after AI reply
+       ✓ No Groq SDK in frontend
+       ✓ No SpeechRecognition dependency
+       ✓ No automatic recorder loop
+       ✓ Mobile friendly
+       ✓ Local history
+       ✓ Recent searches
+       ✓ Theme
+       ✓ Header menu
+       ✓ Drag assistant
     ========================================================= */
 
 
@@ -1830,6 +1829,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const attachmentPreview = $("attachmentPreview");
     const attachmentName = $("attachmentName");
     const attachmentIcon = $("attachmentIcon");
+    const removeAttachment = $("removeAttachment");
 
     const toast = $("helperToast");
     const recentList = $("recentSearchList");
@@ -1848,6 +1848,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const CHAT_API_ENDPOINT = "/api/chat";
     const ANALYZE_API_ENDPOINT = "/api/analyze";
+
+    /*
+       IMPORTANT:
+
+       This endpoint must exist in server.js.
+
+       Frontend sends audio here.
+       server.js receives audio.
+       server.js talks to Groq Whisper.
+       Groq API key NEVER comes into this file.
+    */
     const TRANSCRIBE_API_ENDPOINT = "/api/transcribe";
 
 
@@ -1871,62 +1882,67 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let isSending = false;
 
-    /* Voice state */
+
+    /* =========================================================
+       VOICE STATE
+    ========================================================= */
+
     let voiceMode = false;
+
     let microphoneStream = null;
     let mediaRecorder = null;
+
     let audioChunks = [];
 
-    let audioContext = null;
-    let analyser = null;
-    let microphoneSource = null;
-    let silenceAnimation = null;
+    let recordingActive = false;
+    let processingVoice = false;
 
-    let voiceStartedAt = 0;
-    let lastSpeechAt = 0;
+    let recordingStartedAt = 0;
+    let lastSoundAt = 0;
     let speechDetected = false;
 
-    let recordingActive = false;
-    let voiceRequestRunning = false;
+    let silenceTimer = null;
+    let microphoneStarting = false;
 
-    /*
-       Language returned by Whisper.
-       Examples:
-       bn
-       en
-       hi
-       ta
-       te
-       etc.
-    */
     let detectedLanguage = null;
 
-    /* TTS */
+
+    /* =========================================================
+       TTS STATE
+    ========================================================= */
+
     let speechQueue = [];
     let speechGeneration = 0;
+
     let isSpeaking = false;
 
 
     /* =========================================================
-       VOICE TIMINGS
+       VOICE SETTINGS
     ========================================================= */
 
     /*
-       After speech stops for approximately 2 seconds,
-       submit the recorded voice automatically.
+       User must speak at least this long.
     */
-    const SPEECH_END_SILENCE_MS = 2000;
+    const MIN_RECORDING_MS = 500;
 
     /*
-       If absolutely no speech is detected for 7 seconds,
-       microphone automatically turns OFF.
+       After user stops speaking,
+       wait this much before submitting.
+    */
+    const SPEECH_END_SILENCE_MS = 1800;
+
+    /*
+       If absolutely nothing is spoken,
+       turn voice mode OFF after this time.
     */
     const NO_SPEECH_TIMEOUT_MS = 7000;
 
     /*
-       Small minimum recording length.
+       Audio level threshold.
+       Lower = more sensitive.
     */
-    const MIN_RECORDING_MS = 350;
+    const VOICE_THRESHOLD = 0.025;
 
 
     /* =========================================================
@@ -1945,6 +1961,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 localStorage.getItem(STORAGE_RECENT) || "[]"
             );
 
+            if (!Array.isArray(messages)) {
+                messages = [];
+            }
+
+            if (!Array.isArray(recentSearches)) {
+                recentSearches = [];
+            }
+
         } catch {
 
             messages = [];
@@ -1952,26 +1976,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
         }
 
-        if (Array.isArray(messages) && messages.length) {
 
-            messages.forEach(message => {
+        messages.forEach(message => {
 
-                if (
-                    message &&
-                    message.content
-                ) {
+            if (
+                message &&
+                message.content
+            ) {
 
-                    renderMessage(
-                        message.role,
-                        message.content,
-                        false
-                    );
+                renderMessage(
+                    message.role,
+                    message.content,
+                    false
+                );
 
-                }
+            }
 
-            });
+        });
 
-        }
 
         renderRecent();
 
@@ -2009,7 +2031,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =========================================================
-       UI HELPERS
+       TOAST
     ========================================================= */
 
     function showToast(text) {
@@ -2031,6 +2053,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
+    /* =========================================================
+       HTML SAFETY
+    ========================================================= */
+
     function escapeHTML(value) {
 
         const div = document.createElement("div");
@@ -2048,25 +2074,30 @@ document.addEventListener("DOMContentLoaded", () => {
             String(text || "")
         );
 
+
         html = html.replace(
             /```([\s\S]*?)```/g,
             "<pre><code>$1</code></pre>"
         );
+
 
         html = html.replace(
             /`([^`]+)`/g,
             "<code>$1</code>"
         );
 
+
         html = html.replace(
             /\*\*(.*?)\*\*/g,
             "<strong>$1</strong>"
         );
 
+
         html = html.replace(
             /^[-•] (.*)$/gm,
             "<div>• $1</div>"
         );
+
 
         return html.replace(
             /\n/g,
@@ -2105,6 +2136,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
+    /* =========================================================
+       RENDER MESSAGE
+    ========================================================= */
+
     function renderMessage(
         role,
         content,
@@ -2113,13 +2148,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!chatContainer) return;
 
+
         if (welcome) {
 
             welcome.style.display = "none";
 
         }
 
-        const message = document.createElement("div");
+
+        const message =
+            document.createElement("div");
 
         message.className =
             "message " +
@@ -2135,6 +2173,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         avatar.className =
             "message-avatar";
+
 
         avatar.innerHTML =
             role === "ai"
@@ -2155,6 +2194,7 @@ document.addEventListener("DOMContentLoaded", () => {
         bubble.className =
             "message-bubble";
 
+
         bubble.innerHTML =
             formatMessage(content);
 
@@ -2164,6 +2204,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         meta.className =
             "message-meta";
+
 
         meta.innerHTML =
             `<span>${time()}</span>`;
@@ -2193,15 +2234,13 @@ document.addEventListener("DOMContentLoaded", () => {
             meta
         );
 
+
         message.append(
             avatar,
             body
         );
 
 
-        /*
-           Insert before typing indicator.
-        */
         if (typing) {
 
             chatContainer.insertBefore(
@@ -2221,11 +2260,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (save) {
 
             messages.push({
-
                 role,
                 content: String(content),
                 time: Date.now()
-
             });
 
             saveMessages();
@@ -2238,13 +2275,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
+    /* =========================================================
+       RECENT SEARCH
+    ========================================================= */
+
     function addRecent(text) {
 
         text =
-            String(text || "")
-                .trim();
+            String(text || "").trim();
 
         if (!text) return;
+
 
         recentSearches =
             recentSearches.filter(
@@ -2253,10 +2294,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     text.toLowerCase()
             );
 
+
         recentSearches.unshift(text);
 
         recentSearches =
             recentSearches.slice(0, 8);
+
 
         saveRecent();
 
@@ -2269,7 +2312,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!recentList) return;
 
+
         recentList.innerHTML = "";
+
 
         if (!recentSearches.length) {
 
@@ -2283,36 +2328,42 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        recentSearches.forEach(
-            query => {
+        recentSearches.forEach(query => {
 
-                const item =
-                    document.createElement("div");
+            const item =
+                document.createElement("div");
 
-                item.className =
-                    "recent-item";
+            item.className =
+                "recent-item";
 
-                item.textContent =
+            item.textContent =
+                query;
+
+
+            item.onclick = () => {
+
+                if (!chatInput) return;
+
+                chatInput.value =
                     query;
 
-                item.onclick = () => {
+                resize();
 
-                    chatInput.value =
-                        query;
+                chatInput.focus();
 
-                    resize();
+            };
 
-                    chatInput.focus();
 
-                };
+            recentList.appendChild(item);
 
-                recentList.appendChild(item);
-
-            }
-        );
+        });
 
     }
 
+
+    /* =========================================================
+       COPY
+    ========================================================= */
 
     async function copyText(text) {
 
@@ -2343,8 +2394,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!chatInput) return;
 
+
         chatInput.style.height =
             "auto";
+
 
         chatInput.style.height =
             Math.min(
@@ -2358,16 +2411,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (chatInput) {
 
         chatInput.disabled = false;
-
         chatInput.readOnly = false;
-
         chatInput.tabIndex = 0;
-
-        chatInput.setAttribute(
-            "aria-disabled",
-            "false"
-        );
-
 
         chatInput.addEventListener(
             "input",
@@ -2397,7 +2442,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =========================================================
-       BACKEND RESPONSE
+       SERVER RESPONSE
     ========================================================= */
 
     async function serverResponse(response) {
@@ -2405,7 +2450,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const raw =
             await response.text();
 
+
         let data;
+
 
         try {
 
@@ -2414,16 +2461,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
         } catch {
 
+            if (
+                raw.trim().startsWith("<")
+            ) {
+
+                throw new Error(
+                    "Backend returned HTML instead of JSON. Check server.js and API route."
+                );
+
+            }
+
             throw new Error(
-
-                raw
-                    .trim()
-                    .startsWith("<")
-
-                    ? "Backend returned HTML instead of JSON. Check your server.js and API route."
-
-                    : "Backend returned invalid JSON."
-
+                "Backend returned invalid JSON."
             );
 
         }
@@ -2432,11 +2481,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!response.ok) {
 
             throw new Error(
-
                 data?.error ||
                 data?.message ||
                 `AI server error: HTTP ${response.status}`
-
             );
 
         }
@@ -2445,7 +2492,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return {
 
             text: String(
-
                 data?.answer ??
                 data?.response ??
                 data?.reply ??
@@ -2453,8 +2499,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 data?.content ??
                 data?.analysis ??
                 ""
-
             ).trim(),
+
 
             language:
                 data?.language ||
@@ -2467,7 +2513,42 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =========================================================
-       AI CHAT
+       IMAGE TO DATA URL
+    ========================================================= */
+
+    function fileToDataURL(file) {
+
+        return new Promise(
+            (resolve, reject) => {
+
+                const reader =
+                    new FileReader();
+
+
+                reader.onload =
+                    () => resolve(
+                        reader.result
+                    );
+
+
+                reader.onerror =
+                    () => reject(
+                        new Error(
+                            "Unable to read image."
+                        )
+                    );
+
+
+                reader.readAsDataURL(file);
+
+            }
+        );
+
+    }
+
+
+    /* =========================================================
+       AI REQUEST
     ========================================================= */
 
     async function getAI(
@@ -2475,10 +2556,15 @@ document.addEventListener("DOMContentLoaded", () => {
         file
     ) {
 
+        /*
+           IMAGE REQUEST
+        */
+
         if (file) {
 
             const image =
                 await fileToDataURL(file);
+
 
             const response =
                 await fetch(
@@ -2488,35 +2574,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
                         headers: {
                             "Content-Type":
+                                "application/json",
+
+                            "Accept":
                                 "application/json"
                         },
 
-                        body:
-                            JSON.stringify({
+                        body: JSON.stringify({
 
-                                description:
-                                    text ||
-                                    "Analyze this image naturally and explain what you see.",
+                            description:
+                                text ||
+                                "Analyze this image naturally and explain what you see.",
 
-                                location: "",
+                            location: "",
 
-                                reporterName:
-                                    "CivicAI User",
+                            reporterName:
+                                "CivicAI User",
 
-                                image
+                            image
 
-                            })
+                        })
 
                     }
                 );
 
 
-            return serverResponse(
-                response
-            );
+            return serverResponse(response);
 
         }
 
+
+        /*
+           NORMAL CHAT
+        */
 
         const conversation =
             messages
@@ -2540,7 +2630,6 @@ document.addEventListener("DOMContentLoaded", () => {
             await fetch(
                 CHAT_API_ENDPOINT,
                 {
-
                     method: "POST",
 
                     headers: {
@@ -2553,22 +2642,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     },
 
-                    body:
-                        JSON.stringify({
+                    body: JSON.stringify({
 
-                            message: text,
+                        message: text,
 
-                            conversation
+                        conversation
 
-                        })
+                    })
 
                 }
             );
 
 
-        return serverResponse(
-            response
-        );
+        return serverResponse(response);
 
     }
 
@@ -2581,10 +2667,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (isSending) return;
 
+
         const text =
             String(
                 chatInput?.value || ""
             ).trim();
+
 
         const file =
             selectedFile;
@@ -2613,17 +2701,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const shown =
             file
-
                 ? (
                     text
                         ? text +
                           "\n\n📎 Attached: " +
                           file.name
-
                         : "📎 Attached: " +
                           file.name
                 )
-
                 : text;
 
 
@@ -2694,6 +2779,22 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
+            /*
+               If backend gives language,
+               keep it.
+            */
+
+            if (result?.language) {
+
+                detectedLanguage =
+                    normalizeLanguage(
+                        result.language
+                    ) ||
+                    detectedLanguage;
+
+            }
+
+
             renderMessage(
                 "ai",
                 answer
@@ -2701,9 +2802,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             /*
-               If voice mode is ON,
-               speak the AI answer.
+               VOICE OUTPUT
             */
+
             if (voiceMode) {
 
                 speak(
@@ -2724,15 +2825,19 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
-            const errorMessage =
-                error?.message ||
-                "Unknown AI error.";
+            console.error(
+                "CivicAI chat error:",
+                error
+            );
 
 
             renderMessage(
                 "ai",
                 "**CivicAI couldn't process your request.**\n\n" +
-                errorMessage
+                (
+                    error?.message ||
+                    "Unknown AI error."
+                )
             );
 
         } finally {
@@ -2756,48 +2861,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
             }
 
+
+            /*
+               IMPORTANT:
+               Voice recorder is restarted
+               by voice lifecycle, not here.
+            */
+
         }
 
     }
 
 
     /* =========================================================
-       IMAGE
+       FILE BUTTON
     ========================================================= */
-
-    function fileToDataURL(file) {
-
-        return new Promise(
-            (resolve, reject) => {
-
-                const reader =
-                    new FileReader();
-
-                reader.onload =
-                    () => resolve(
-                        reader.result
-                    );
-
-                reader.onerror =
-                    () => reject(
-                        new Error(
-                            "Unable to read image."
-                        )
-                    );
-
-                reader.readAsDataURL(
-                    file
-                );
-
-            }
-        );
-
-    }
-
 
     if (fileButton) {
 
         fileButton.onclick = () => {
+
+            if (!fileInput) return;
 
             fileInput.removeAttribute(
                 "capture"
@@ -2810,9 +2894,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
+    /* =========================================================
+       CAMERA BUTTON
+    ========================================================= */
+
     if (cameraButton) {
 
         cameraButton.onclick = () => {
+
+            if (!fileInput) return;
 
             fileInput.setAttribute(
                 "capture",
@@ -2826,6 +2916,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
+    /* =========================================================
+       FILE INPUT
+    ========================================================= */
+
     if (fileInput) {
 
         fileInput.onchange = () => {
@@ -2833,13 +2927,12 @@ document.addEventListener("DOMContentLoaded", () => {
             const file =
                 fileInput.files?.[0];
 
+
             if (!file) return;
 
 
             if (
-                !file.type.startsWith(
-                    "image/"
-                )
+                !file.type.startsWith("image/")
             ) {
 
                 showToast(
@@ -2869,8 +2962,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
-            selectedFile =
-                file;
+            selectedFile = file;
 
 
             if (attachmentName) {
@@ -2902,10 +2994,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    const removeAttachment =
-        $("removeAttachment");
-
-
     if (removeAttachment) {
 
         removeAttachment.onclick =
@@ -2917,6 +3005,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function clearAttachment() {
 
         selectedFile = null;
+
 
         if (attachmentPreview) {
 
@@ -2945,12 +3034,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =========================================================
-       LANGUAGE DETECTION
+       LANGUAGE
     ========================================================= */
 
-    function normalizeLanguage(
-        language
-    ) {
+    function normalizeLanguage(language) {
 
         if (!language) {
 
@@ -2968,7 +3055,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (
             lang === "bn" ||
             lang.startsWith("bn-") ||
-            lang.includes("bengali")
+            lang.includes("bengali") ||
+            lang.includes("bangla")
         ) {
 
             return "bn-IN";
@@ -3055,17 +3143,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    function detectLanguageFromText(
-        text
-    ) {
+    function detectLanguageFromText(text) {
 
         const value =
             String(text || "");
 
 
-        /*
-           Bengali Unicode
-        */
         if (
             /[\u0980-\u09FF]/.test(value)
         ) {
@@ -3075,9 +3158,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        /*
-           Hindi / Devanagari
-        */
         if (
             /[\u0900-\u097F]/.test(value)
         ) {
@@ -3087,9 +3167,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        /*
-           Tamil
-        */
         if (
             /[\u0B80-\u0BFF]/.test(value)
         ) {
@@ -3099,9 +3176,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        /*
-           Telugu
-        */
         if (
             /[\u0C00-\u0C7F]/.test(value)
         ) {
@@ -3111,16 +3185,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        /*
-           Default
-        */
         return "en-IN";
 
     }
 
 
     /* =========================================================
-       SPEECH SYNTHESIS
+       TTS
     ========================================================= */
 
     function getVoices() {
@@ -3133,14 +3204,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         }
 
+
         return speechSynthesis.getVoices();
 
     }
 
 
-    function chooseVoice(
-        language
-    ) {
+    function chooseVoice(language) {
 
         const voices =
             getVoices();
@@ -3154,9 +3224,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         const normalized =
-            normalizeLanguage(
-                language
-            ) ||
+            normalizeLanguage(language) ||
             "en-IN";
 
 
@@ -3166,9 +3234,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 .toLowerCase();
 
 
-        /*
-           First try exact language.
-        */
         let voice =
             voices.find(
                 v =>
@@ -3185,17 +3250,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        /*
-           Then same language family.
-        */
         voice =
             voices.find(
                 v =>
                     String(v.lang)
                         .toLowerCase()
-                        .startsWith(
-                            base
-                        )
+                        .startsWith(base)
             );
 
 
@@ -3206,16 +3266,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        /*
-           Common Indian voices.
-        */
         if (base === "bn") {
 
             voice =
                 voices.find(
                     v =>
-                        /bengali|bangla|heera/i
-                            .test(v.name)
+                        /bengali|bangla/i.test(
+                            v.name
+                        )
                 );
 
             if (voice) return voice;
@@ -3228,8 +3286,9 @@ document.addEventListener("DOMContentLoaded", () => {
             voice =
                 voices.find(
                     v =>
-                        /hindi|heera/i
-                            .test(v.name)
+                        /hindi/i.test(
+                            v.name
+                        )
                 );
 
             if (voice) return voice;
@@ -3237,26 +3296,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        /*
-           English fallback.
-        */
-        voice =
+        return (
             voices.find(
                 v =>
                     /^en(-|_)/i.test(
                         v.lang
                     )
-            );
-
-
-        return voice || voices[0];
+            ) ||
+            voices[0]
+        );
 
     }
 
 
-    function cleanForSpeech(
-        text
-    ) {
+    function cleanForSpeech(text) {
 
         return String(text || "")
 
@@ -3266,12 +3319,12 @@ document.addEventListener("DOMContentLoaded", () => {
             )
 
             .replace(
-                /[*#_`]/g,
+                /https?:\/\/\S+/g,
                 " "
             )
 
             .replace(
-                /https?:\/\/\S+/g,
+                /[*#_`]/g,
                 " "
             )
 
@@ -3285,9 +3338,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    function splitSpeech(
-        text
-    ) {
+    function splitSpeech(text) {
 
         const clean =
             cleanForSpeech(text);
@@ -3300,19 +3351,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        /*
-           Split at sentence boundaries.
-           This prevents Chrome TTS from stopping
-           in the middle of a very long response.
-        */
-        const parts =
+        return (
             clean.match(
-                /[^.!?।!?]+[.!?।!?]?/g
-            ) || [clean];
-
-
-        return parts
-            .map(x => x.trim())
+                /[^.!?।]+[.!?।]?/g
+            ) || [clean]
+        )
+            .map(
+                item => item.trim()
+            )
             .filter(Boolean);
 
     }
@@ -3350,9 +3396,6 @@ document.addEventListener("DOMContentLoaded", () => {
             splitSpeech(clean);
 
 
-        /*
-           Cancel previous speech.
-        */
         try {
 
             speechSynthesis.cancel();
@@ -3360,27 +3403,12 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch {}
 
 
-        isSpeaking = false;
-
-        aiOrb?.classList.remove(
-            "speaking"
-        );
-
-        voiceWave?.classList.remove(
-            "show"
-        );
+        stopSpeakingUI();
 
 
-        /*
-           Prefer Whisper's detected language.
-        */
         const finalLanguage =
-            normalizeLanguage(
-                language
-            ) ||
-            detectLanguageFromText(
-                clean
-            );
+            normalizeLanguage(language) ||
+            detectLanguageFromText(clean);
 
 
         speakNext(
@@ -3422,8 +3450,10 @@ document.addEventListener("DOMContentLoaded", () => {
             stopSpeakingUI();
 
             /*
-               Voice listening remains ON.
-               Microphone is NOT turned off.
+               IMPORTANT:
+               Do NOT turn voice mode off.
+               Microphone lifecycle handles
+               listening.
             */
 
             return;
@@ -3442,18 +3472,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         const finalLanguage =
-            normalizeLanguage(
-                language
-            ) ||
-            detectLanguageFromText(
-                sentence
-            );
+            normalizeLanguage(language) ||
+            detectLanguageFromText(sentence);
 
 
-        /*
-           VERY IMPORTANT:
-           Set language before selecting voice.
-        */
         utterance.lang =
             finalLanguage;
 
@@ -3479,91 +3501,76 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         utterance.pitch =
-            1.08;
+            1.05;
 
 
         utterance.volume =
             1;
 
 
-        utterance.onstart =
-            () => {
+        utterance.onstart = () => {
 
-                isSpeaking = true;
+            isSpeaking = true;
 
-                aiOrb?.classList.add(
-                    "speaking"
+            aiOrb?.classList.add(
+                "speaking"
+            );
+
+            voiceWave?.classList.add(
+                "show"
+            );
+
+        };
+
+
+        utterance.onend = () => {
+
+            isSpeaking = false;
+
+            try {
+
+                speechSynthesis.resume();
+
+            } catch {}
+
+
+            setTimeout(() => {
+
+                speakNext(
+                    generation,
+                    finalLanguage
                 );
 
-                voiceWave?.classList.add(
-                    "show"
+            }, 50);
+
+        };
+
+
+        utterance.onerror = error => {
+
+            console.warn(
+                "TTS error:",
+                error
+            );
+
+
+            isSpeaking = false;
+
+
+            setTimeout(() => {
+
+                speakNext(
+                    generation,
+                    finalLanguage
                 );
 
-            };
+            }, 50);
 
-
-        utterance.onend =
-            () => {
-
-                /*
-                   Resume because Chrome sometimes
-                   pauses speech synthesis automatically.
-                */
-                try {
-
-                    speechSynthesis.resume();
-
-                } catch {}
-
-
-                setTimeout(
-                    () => {
-
-                        speakNext(
-                            generation,
-                            finalLanguage
-                        );
-
-                    },
-                    30
-                );
-
-            };
-
-
-        utterance.onerror =
-            error => {
-
-                console.warn(
-                    "TTS error:",
-                    error
-                );
-
-
-                /*
-                   Do not kill voice mode
-                   because TTS had an error.
-                */
-                setTimeout(
-                    () => {
-
-                        speakNext(
-                            generation,
-                            finalLanguage
-                        );
-
-                    },
-                    50
-                );
-
-            };
+        };
 
 
         try {
 
-            /*
-               Explicit resume before speak.
-            */
             speechSynthesis.resume();
 
             speechSynthesis.speak(
@@ -3599,35 +3606,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    /*
-       Chrome can pause speech synthesis unexpectedly.
-       Keep it alive while speaking.
-    */
-    setInterval(
-        () => {
-
-            if (
-                isSpeaking &&
-                voiceMode &&
-                "speechSynthesis" in window
-            ) {
-
-                try {
-
-                    speechSynthesis.resume();
-
-                } catch {}
-
-            }
-
-        },
-        3000
-    );
-
-
-    /*
-       Load voices.
-    */
     if (
         "speechSynthesis" in window
     ) {
@@ -3643,234 +3621,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =========================================================
-       MICROPHONE
-       MEDIARECORDER + GROQ WHISPER
+       IMPORTANT:
+       PREVENT CHROME TTS FROM STAYING PAUSED
     ========================================================= */
 
-    async function startMicrophone() {
-
-        if (recordingActive) {
-
-            return;
-
-        }
-
+    setInterval(() => {
 
         if (
-            !navigator.mediaDevices ||
-            !navigator.mediaDevices.getUserMedia
+            isSpeaking &&
+            voiceMode &&
+            "speechSynthesis" in window
         ) {
 
-            showToast(
-                "Microphone is not supported by this browser."
-            );
+            try {
 
-            return;
+                speechSynthesis.resume();
 
-        }
-
-
-        if (
-            !window.MediaRecorder
-        ) {
-
-            showToast(
-                "Voice recording is not supported. Use Chrome or Edge."
-            );
-
-            return;
+            } catch {}
 
         }
 
+    }, 3000);
 
-        try {
 
-            microphoneStream =
-                await navigator.mediaDevices.getUserMedia(
-                    {
-                        audio: {
-                            echoCancellation: true,
-                            noiseSuppression: true,
-                            autoGainControl: true
-                        }
-                    }
-                );
-
-
-            setupAudioMeter();
-
-
-            audioChunks = [];
-
-
-            const mimeType =
-                getSupportedMimeType();
-
-
-            if (mimeType) {
-
-                mediaRecorder =
-                    new MediaRecorder(
-                        microphoneStream,
-                        {
-                            mimeType
-                        }
-                    );
-
-            } else {
-
-                mediaRecorder =
-                    new MediaRecorder(
-                        microphoneStream
-                    );
-
-            }
-
-
-            mediaRecorder.ondataavailable =
-                event => {
-
-                    if (
-                        event.data &&
-                        event.data.size > 0
-                    ) {
-
-                        audioChunks.push(
-                            event.data
-                        );
-
-                    }
-
-                };
-
-
-            mediaRecorder.onstop =
-                async () => {
-
-                    const chunks =
-                        audioChunks.slice();
-
-
-                    audioChunks = [];
-
-
-                    if (
-                        !chunks.length
-                    ) {
-
-                        voiceRequestRunning =
-                            false;
-
-                        if (voiceMode) {
-
-                            restartRecording();
-
-                        }
-
-                        return;
-
-                    }
-
-
-                    const blob =
-                        new Blob(
-                            chunks,
-                            {
-                                type:
-                                    mediaRecorder?.mimeType ||
-                                    "audio/webm"
-                            }
-                        );
-
-
-                    if (
-                        blob.size < 1000
-                    ) {
-
-                        voiceRequestRunning =
-                            false;
-
-                        if (voiceMode) {
-
-                            restartRecording();
-
-                        }
-
-                        return;
-
-                    }
-
-
-                    await processRecordedVoice(
-                        blob
-                    );
-
-                };
-
-
-            mediaRecorder.onerror =
-                error => {
-
-                    console.error(
-                        "MediaRecorder error:",
-                        error
-                    );
-
-                    showToast(
-                        "Microphone recording error."
-                    );
-
-                };
-
-
-            mediaRecorder.start(
-                250
-            );
-
-
-            recordingActive =
-                true;
-
-
-            voiceStartedAt =
-                Date.now();
-
-
-            lastSpeechAt =
-                Date.now();
-
-
-            speechDetected =
-                false;
-
-
-            updateVoiceUI(
-                "Listening… speak now"
-            );
-
-
-            startSilenceDetection();
-
-
-        } catch (error) {
-
-            console.error(
-                "Microphone permission error:",
-                error
-            );
-
-
-            showToast(
-                "Microphone permission denied or unavailable."
-            );
-
-
-            stopAllMicrophone();
-
-        }
-
-    }
-
+    /* =========================================================
+       MICROPHONE MIME TYPE
+    ========================================================= */
 
     function getSupportedMimeType() {
 
@@ -3914,8 +3690,242 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =========================================================
-       AUDIO SILENCE DETECTION
+       START MICROPHONE
     ========================================================= */
+
+    async function startMicrophone() {
+
+        if (
+            microphoneStarting ||
+            recordingActive ||
+            processingVoice ||
+            !voiceMode
+        ) {
+
+            return;
+
+        }
+
+
+        microphoneStarting = true;
+
+
+        try {
+
+            if (
+                !navigator.mediaDevices ||
+                !navigator.mediaDevices.getUserMedia
+            ) {
+
+                throw new Error(
+                    "Microphone is not supported by this browser."
+                );
+
+            }
+
+
+            if (!window.MediaRecorder) {
+
+                throw new Error(
+                    "MediaRecorder is not supported. Please use Chrome or Edge."
+                );
+
+            }
+
+
+            /*
+               If an old stream exists,
+               clean it first.
+            */
+
+            stopRecorderOnly();
+
+
+            /*
+               GET MICROPHONE
+            */
+
+            microphoneStream =
+                await navigator.mediaDevices.getUserMedia(
+                    {
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        }
+                    }
+                );
+
+
+            /*
+               CREATE RECORDER
+            */
+
+            const mimeType =
+                getSupportedMimeType();
+
+
+            if (mimeType) {
+
+                mediaRecorder =
+                    new MediaRecorder(
+                        microphoneStream,
+                        {
+                            mimeType
+                        }
+                    );
+
+            } else {
+
+                mediaRecorder =
+                    new MediaRecorder(
+                        microphoneStream
+                    );
+
+            }
+
+
+            audioChunks = [];
+
+
+            /*
+               DATA
+            */
+
+            mediaRecorder.ondataavailable =
+                event => {
+
+                    if (
+                        event.data &&
+                        event.data.size > 0
+                    ) {
+
+                        audioChunks.push(
+                            event.data
+                        );
+
+                    }
+
+                };
+
+
+            /*
+               STOP
+            */
+
+            mediaRecorder.onstop =
+                async () => {
+
+                    await handleRecorderStop();
+
+                };
+
+
+            /*
+               ERROR
+            */
+
+            mediaRecorder.onerror =
+                event => {
+
+                    console.error(
+                        "MediaRecorder error:",
+                        event
+                    );
+
+
+                    processingVoice = false;
+                    recordingActive = false;
+
+
+                    showToast(
+                        "Microphone recording error."
+                    );
+
+
+                    if (voiceMode) {
+
+                        restartMicrophone();
+
+                    }
+
+                };
+
+
+            /*
+               START RECORDING
+            */
+
+            mediaRecorder.start(250);
+
+
+            recordingActive = true;
+
+            processingVoice = false;
+
+            recordingStartedAt =
+                Date.now();
+
+            lastSoundAt =
+                Date.now();
+
+            speechDetected = false;
+
+
+            updateVoiceUI(
+                "Listening… speak now"
+            );
+
+
+            /*
+               Start audio level detection
+            */
+
+            startVoiceActivityDetection();
+
+
+        } catch (error) {
+
+            console.error(
+                "Microphone start error:",
+                error
+            );
+
+
+            recordingActive = false;
+
+
+            showToast(
+                error?.message ||
+                "Microphone permission denied or unavailable."
+            );
+
+
+            voiceMode = false;
+
+            stopAllMicrophone();
+
+            updateVoiceUI("");
+
+        } finally {
+
+            microphoneStarting = false;
+
+        }
+
+    }
+
+
+    /* =========================================================
+       AUDIO ACTIVITY DETECTION
+    ========================================================= */
+
+    let audioContext = null;
+    let analyser = null;
+    let microphoneSource = null;
+    let audioData = null;
+    let activityFrame = null;
+
 
     function setupAudioMeter() {
 
@@ -3924,17 +3934,28 @@ document.addEventListener("DOMContentLoaded", () => {
             if (audioContext) {
 
                 try {
+
                     audioContext.close();
+
                 } catch {}
 
             }
 
 
+            const AudioContextClass =
+                window.AudioContext ||
+                window.webkitAudioContext;
+
+
+            if (!AudioContextClass) {
+
+                return;
+
+            }
+
+
             audioContext =
-                new (
-                    window.AudioContext ||
-                    window.webkitAudioContext
-                )();
+                new AudioContextClass();
 
 
             analyser =
@@ -3946,7 +3967,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             analyser.smoothingTimeConstant =
-                0.85;
+                0.80;
 
 
             microphoneSource =
@@ -3960,38 +3981,42 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
 
+            audioData =
+                new Uint8Array(
+                    analyser.fftSize
+                );
+
+
         } catch (error) {
 
             console.warn(
-                "Audio meter unavailable:",
+                "Audio meter setup failed:",
                 error
             );
 
+
             analyser = null;
+            audioData = null;
 
         }
 
     }
 
 
-    function startSilenceDetection() {
+    function startVoiceActivityDetection() {
 
-        stopSilenceDetection();
+        stopVoiceActivityDetection();
 
 
-        const data =
-            analyser
-                ? new Uint8Array(
-                    analyser.fftSize
-                )
-                : null;
+        setupAudioMeter();
 
 
         function check() {
 
             if (
                 !voiceMode ||
-                !recordingActive
+                !recordingActive ||
+                processingVoice
             ) {
 
                 return;
@@ -4003,20 +4028,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 Date.now();
 
 
-            /*
-               If AudioContext is available,
-               calculate microphone volume.
-            */
             let volume = 0;
 
 
+            /*
+               Calculate RMS microphone volume.
+            */
+
             if (
                 analyser &&
-                data
+                audioData
             ) {
 
                 analyser.getByteTimeDomainData(
-                    data
+                    audioData
                 );
 
 
@@ -4025,35 +4050,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 for (
                     let i = 0;
-                    i < data.length;
+                    i < audioData.length;
                     i++
                 ) {
 
-                    const value =
-                        (data[i] - 128) /
-                        128;
+                    const normalized =
+                        (
+                            audioData[i] -
+                            128
+                        ) / 128;
+
 
                     sum +=
-                        value * value;
+                        normalized *
+                        normalized;
 
                 }
 
 
                 volume =
                     Math.sqrt(
-                        sum / data.length
+                        sum /
+                        audioData.length
                     );
 
             }
 
 
             /*
-               Threshold.
-               Lower value = more sensitive.
+               SPEECH DETECTED
             */
-            const VOICE_THRESHOLD =
-                0.018;
-
 
             if (
                 volume >
@@ -4063,8 +4089,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 speechDetected =
                     true;
 
-                lastSpeechAt =
+                lastSoundAt =
                     now;
+
 
                 updateVoiceUI(
                     "Listening… hearing you"
@@ -4074,13 +4101,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             /*
-               CASE 1:
-               User spoke, then stayed silent
-               for approximately 2 seconds.
+               USER SPOKE THEN STOPPED
             */
+
             if (
                 speechDetected &&
-                now - lastSpeechAt >=
+                now - lastSoundAt >=
                 SPEECH_END_SILENCE_MS
             ) {
 
@@ -4092,12 +4118,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             /*
-               CASE 2:
-               User never spoke for 7 seconds.
+               USER NEVER SPOKE
             */
+
             if (
                 !speechDetected &&
-                now - voiceStartedAt >=
+                now - recordingStartedAt >=
                 NO_SPEECH_TIMEOUT_MS
             ) {
 
@@ -4113,7 +4139,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
-            silenceAnimation =
+            activityFrame =
                 requestAnimationFrame(
                     check
                 );
@@ -4121,7 +4147,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        silenceAnimation =
+        activityFrame =
             requestAnimationFrame(
                 check
             );
@@ -4129,18 +4155,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    function stopSilenceDetection() {
+    function stopVoiceActivityDetection() {
 
-        if (
-            silenceAnimation
-        ) {
+        if (activityFrame) {
 
             cancelAnimationFrame(
-                silenceAnimation
+                activityFrame
             );
 
-            silenceAnimation =
-                null;
+            activityFrame = null;
 
         }
 
@@ -4148,14 +4171,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =========================================================
-       FINISH RECORDING
+       FINISH CURRENT RECORDING
     ========================================================= */
 
     function finishCurrentRecording() {
 
         if (
             !recordingActive ||
-            voiceRequestRunning
+            processingVoice
         ) {
 
             return;
@@ -4165,7 +4188,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const elapsed =
             Date.now() -
-            voiceStartedAt;
+            recordingStartedAt;
 
 
         if (
@@ -4178,11 +4201,27 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        voiceRequestRunning =
-            true;
+        /*
+           If nothing was detected,
+           don't send an empty recording.
+        */
+
+        if (!speechDetected) {
+
+            return;
+
+        }
 
 
-        stopSilenceDetection();
+        processingVoice = true;
+
+
+        stopVoiceActivityDetection();
+
+
+        updateVoiceUI(
+            "Processing voice…"
+        );
 
 
         try {
@@ -4197,20 +4236,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
             } else {
 
-                voiceRequestRunning =
-                    false;
+                processingVoice = false;
 
             }
 
         } catch (error) {
 
             console.error(
-                "Stopping recorder failed:",
+                "Recorder stop error:",
                 error
             );
 
-            voiceRequestRunning =
-                false;
+
+            processingVoice = false;
+
+
+            restartMicrophone();
 
         }
 
@@ -4218,39 +4259,133 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =========================================================
-       PROCESS VOICE
+       HANDLE RECORDER STOP
     ========================================================= */
 
-    async function processRecordedVoice(
-        blob
-    ) {
+    async function handleRecorderStop() {
 
-        recordingActive =
-            false;
+        recordingActive = false;
 
 
-        updateVoiceUI(
-            "Processing voice…"
+        stopVoiceActivityDetection();
+
+
+        const chunks =
+            audioChunks.slice();
+
+
+        audioChunks = [];
+
+
+        if (!chunks.length) {
+
+            processingVoice = false;
+
+
+            if (voiceMode) {
+
+                restartMicrophone();
+
+            }
+
+
+            return;
+
+        }
+
+
+        /*
+           IMPORTANT:
+           Save mime type BEFORE destroying recorder.
+        */
+
+        const mimeType =
+            mediaRecorder?.mimeType ||
+            "audio/webm";
+
+
+        const blob =
+            new Blob(
+                chunks,
+                {
+                    type: mimeType
+                }
+            );
+
+
+        console.log(
+            "Voice blob:",
+            blob.size,
+            blob.type
         );
 
 
+        /*
+           Small/invalid recording.
+        */
+
+        if (
+            blob.size < 1000
+        ) {
+
+            console.warn(
+                "Voice recording too small."
+            );
+
+
+            processingVoice = false;
+
+
+            if (voiceMode) {
+
+                restartMicrophone();
+
+            }
+
+
+            return;
+
+        }
+
+
+        /*
+           SEND TO BACKEND
+        */
+
+        await transcribeVoice(
+            blob
+        );
+
+    }
+
+
+    /* =========================================================
+       TRANSCRIBE VOICE
+    ========================================================= */
+
+    async function transcribeVoice(blob) {
+
         try {
+
+            updateVoiceUI(
+                "Transcribing…"
+            );
+
 
             const formData =
                 new FormData();
 
 
+            /*
+               Determine extension.
+            */
+
             let extension =
                 "webm";
 
 
-            const type =
-                blob.type ||
-                "audio/webm";
-
-
             if (
-                type.includes("ogg")
+                blob.type.includes("ogg")
             ) {
 
                 extension =
@@ -4266,37 +4401,86 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
 
+            console.log(
+                "Sending audio to:",
+                TRANSCRIBE_API_ENDPOINT
+            );
+
+
+            /*
+               IMPORTANT:
+               Do NOT set Content-Type manually.
+               Browser automatically creates
+               multipart/form-data boundary.
+            */
+
             const response =
                 await fetch(
                     TRANSCRIBE_API_ENDPOINT,
                     {
                         method: "POST",
-                        body: formData
+
+                        headers: {
+                            "Accept":
+                                "application/json"
+                        },
+
+                        body:
+                            formData
                     }
                 );
 
 
-            const result =
-                await response.json();
+            const raw =
+                await response.text();
 
 
-            if (
-                !response.ok ||
-                !result?.success
-            ) {
+            console.log(
+                "Transcription response:",
+                raw
+            );
+
+
+            let result;
+
+
+            try {
+
+                result =
+                    JSON.parse(raw);
+
+            } catch {
 
                 throw new Error(
-                    result?.error ||
-                    "Voice transcription failed."
+                    raw.trim().startsWith("<")
+                        ? "Transcription API returned HTML. Check /api/transcribe in server.js."
+                        : "Transcription API returned invalid JSON."
                 );
 
             }
 
 
+            if (!response.ok) {
+
+                throw new Error(
+                    result?.error ||
+                    result?.message ||
+                    `Transcription failed: HTTP ${response.status}`
+                );
+
+            }
+
+
+            /*
+               Support multiple backend formats.
+            */
+
             const transcript =
                 String(
-                    result?.text ||
-                    result?.transcript ||
+                    result?.text ??
+                    result?.transcript ??
+                    result?.answer ??
+                    result?.response ??
                     ""
                 ).trim();
 
@@ -4311,21 +4495,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             /*
-               IMPORTANT:
-               Take language from Whisper first.
+               LANGUAGE
             */
+
             detectedLanguage =
                 normalizeLanguage(
-                    result?.language
+                    result?.language ||
+                    result?.lang
                 ) ||
                 detectLanguageFromText(
                     transcript
                 );
 
 
+            console.log(
+                "Transcript:",
+                transcript
+            );
+
+
+            console.log(
+                "Detected language:",
+                detectedLanguage
+            );
+
+
             /*
-               Put EXACT transcription into input.
+               PUT TRANSCRIPT INTO INPUT
             */
+
             if (chatInput) {
 
                 chatInput.value =
@@ -4337,17 +4535,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             /*
-               Show language in status temporarily.
+               Show transcript briefly.
             */
+
             updateVoiceUI(
-                "Detected language: " +
-                detectedLanguage
+                "Heard: " +
+                (
+                    transcript.length > 55
+                        ? transcript.slice(0, 55) + "…"
+                        : transcript
+                )
             );
 
 
             /*
-               Automatically send.
+               IMPORTANT:
+               Automatically submit the transcript.
             */
+
             await sendMessage();
 
 
@@ -4364,20 +4569,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 "Unable to understand your voice."
             );
 
+
         } finally {
 
-            voiceRequestRunning =
+            processingVoice =
                 false;
 
 
             /*
-               If Voice Assistant is still ON,
-               immediately prepare for the next
-               voice sentence.
+               Voice mode stays ON.
+               Start a NEW recording only after
+               current request has finished.
             */
+
             if (voiceMode) {
 
-                restartRecording();
+                restartMicrophone();
 
             } else {
 
@@ -4391,10 +4598,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =========================================================
-       RESTART RECORDING
+       RESTART MICROPHONE
     ========================================================= */
 
-    function restartRecording() {
+    function restartMicrophone() {
 
         if (!voiceMode) {
 
@@ -4403,33 +4610,80 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        if (voiceRequestRunning) {
+        if (
+            microphoneStarting ||
+            recordingActive ||
+            processingVoice
+        ) {
 
             return;
 
         }
 
 
-        /*
-           Small delay prevents microphone
-           start/stop race conditions.
-        */
-        setTimeout(
-            () => {
+        setTimeout(() => {
+
+            if (
+                voiceMode &&
+                !microphoneStarting &&
+                !recordingActive &&
+                !processingVoice
+            ) {
+
+                startMicrophone();
+
+            }
+
+        }, 500);
+
+    }
+
+
+    /* =========================================================
+       STOP RECORDER ONLY
+    ========================================================= */
+
+    function stopRecorderOnly() {
+
+        stopVoiceActivityDetection();
+
+
+        if (mediaRecorder) {
+
+            try {
+
+                mediaRecorder.onstop = null;
+                mediaRecorder.onerror = null;
+
+            } catch {}
+
+
+            try {
 
                 if (
-                    voiceMode &&
-                    !recordingActive &&
-                    !voiceRequestRunning
+                    mediaRecorder.state !==
+                    "inactive"
                 ) {
 
-                    startMicrophone();
+                    mediaRecorder.stop();
 
                 }
 
-            },
-            350
-        );
+            } catch {}
+
+        }
+
+
+        mediaRecorder =
+            null;
+
+
+        recordingActive =
+            false;
+
+
+        audioChunks =
+            [];
 
     }
 
@@ -4438,9 +4692,7 @@ document.addEventListener("DOMContentLoaded", () => {
        VOICE UI
     ========================================================= */
 
-    function updateVoiceUI(
-        text
-    ) {
+    function updateVoiceUI(text) {
 
         if (voiceButton) {
 
@@ -4454,12 +4706,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (voiceStatus) {
 
-            voiceStatus.classList.add(
-                "show"
-            );
+            if (text) {
 
-            voiceStatus.textContent =
-                text || "Listening…";
+                voiceStatus.classList.add(
+                    "show"
+                );
+
+                voiceStatus.textContent =
+                    text;
+
+            } else {
+
+                voiceStatus.classList.remove(
+                    "show"
+                );
+
+                voiceStatus.textContent =
+                    "";
+
+            }
 
         }
 
@@ -4490,20 +4755,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function stopAllMicrophone() {
 
-        stopSilenceDetection();
+        stopVoiceActivityDetection();
 
 
-        if (
-            mediaRecorder
-        ) {
+        if (mediaRecorder) {
 
             try {
 
-                mediaRecorder.onstop =
-                    null;
+                mediaRecorder.onstop = null;
+                mediaRecorder.onerror = null;
 
-                mediaRecorder.onerror =
-                    null;
+            } catch {}
+
+
+            try {
 
                 if (
                     mediaRecorder.state !==
@@ -4527,27 +4792,27 @@ document.addEventListener("DOMContentLoaded", () => {
             false;
 
 
-        voiceRequestRunning =
+        processingVoice =
             false;
 
 
-        if (
-            microphoneStream
-        ) {
+        audioChunks =
+            [];
+
+
+        if (microphoneStream) {
 
             microphoneStream
                 .getTracks()
-                .forEach(
-                    track => {
+                .forEach(track => {
 
-                        try {
+                    try {
 
-                            track.stop();
+                        track.stop();
 
-                        } catch {}
+                    } catch {}
 
-                    }
-                );
+                });
 
         }
 
@@ -4556,9 +4821,7 @@ document.addEventListener("DOMContentLoaded", () => {
             null;
 
 
-        if (
-            microphoneSource
-        ) {
+        if (microphoneSource) {
 
             try {
 
@@ -4574,6 +4837,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         analyser =
+            null;
+
+
+        audioData =
             null;
 
 
@@ -4616,6 +4883,46 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =========================================================
+       TTS UNLOCK
+    ========================================================= */
+
+    function unlockSpeechSynthesis() {
+
+        if (
+            !("speechSynthesis" in window)
+        ) {
+
+            return;
+
+        }
+
+
+        try {
+
+            speechSynthesis.cancel();
+
+
+            const utterance =
+                new SpeechSynthesisUtterance("");
+
+
+            utterance.volume =
+                0;
+
+
+            speechSynthesis.speak(
+                utterance
+            );
+
+
+            speechSynthesis.resume();
+
+        } catch {}
+
+    }
+
+
+    /* =========================================================
        START VOICE MODE
     ========================================================= */
 
@@ -4632,16 +4939,15 @@ document.addEventListener("DOMContentLoaded", () => {
             true;
 
 
+        detectedLanguage =
+            null;
+
+
         updateVoiceUI(
             "Starting microphone…"
         );
 
 
-        /*
-           Browser TTS unlock.
-           This happens directly from the
-           user's button click.
-        */
         unlockSpeechSynthesis();
 
 
@@ -4650,24 +4956,7 @@ document.addEventListener("DOMContentLoaded", () => {
         );
 
 
-        try {
-
-            await startMicrophone();
-
-        } catch (error) {
-
-            console.error(
-                error
-            );
-
-            voiceMode =
-                false;
-
-            updateVoiceUI(
-                ""
-            );
-
-        }
+        await startMicrophone();
 
     }
 
@@ -4710,9 +4999,7 @@ document.addEventListener("DOMContentLoaded", () => {
         stopAllMicrophone();
 
 
-        updateVoiceUI(
-            ""
-        );
+        updateVoiceUI("");
 
 
         if (voiceToggle) {
@@ -4735,59 +5022,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =========================================================
-       SPEECH SYNTHESIS UNLOCK
-    ========================================================= */
-
-    function unlockSpeechSynthesis() {
-
-        if (
-            !("speechSynthesis" in window)
-        ) {
-
-            return;
-
-        }
-
-
-        try {
-
-            speechSynthesis.cancel();
-
-
-            const utterance =
-                new SpeechSynthesisUtterance(
-                    ""
-                );
-
-
-            utterance.volume =
-                0;
-
-
-            utterance.rate =
-                1;
-
-
-            speechSynthesis.speak(
-                utterance
-            );
-
-
-            speechSynthesis.resume();
-
-        } catch {}
-
-    }
-
-
-    /* =========================================================
-       VOICE BUTTONS
+       VOICE BUTTON
     ========================================================= */
 
     if (voiceButton) {
 
         voiceButton.onclick =
-            async () => {
+            async event => {
+
+                event?.stopPropagation();
+
 
                 if (voiceMode) {
 
@@ -4807,7 +5051,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (voiceToggle) {
 
         voiceToggle.onclick =
-            async () => {
+            async event => {
+
+                event?.stopPropagation();
+
 
                 if (voiceMode) {
 
@@ -4829,18 +5076,6 @@ document.addEventListener("DOMContentLoaded", () => {
     ========================================================= */
 
     function startNewChat() {
-
-        if (
-            voiceMode
-        ) {
-
-            /*
-               Keep Voice Assistant active.
-               Only clear conversation.
-            */
-
-        }
-
 
         messages = [];
 
@@ -4867,7 +5102,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (chatInput) {
 
-            chatInput.value = "";
+            chatInput.value =
+                "";
 
             resize();
 
@@ -5005,6 +5241,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
+    /* =========================================================
+       SAVE CHAT
+    ========================================================= */
+
     if ($("saveChatButton")) {
 
         $("saveChatButton").onclick =
@@ -5069,18 +5309,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     .querySelectorAll(
                         ".recent-item"
                     )
-                    .forEach(
-                        item => {
+                    .forEach(item => {
 
-                            item.style.display =
-                                item.textContent
-                                    .toLowerCase()
-                                    .includes(query)
-                                    ? "flex"
-                                    : "none";
+                        item.style.display =
+                            item.textContent
+                                .toLowerCase()
+                                .includes(query)
+                                ? "flex"
+                                : "none";
 
-                        }
-                    );
+                    });
 
             };
 
@@ -5163,6 +5401,7 @@ document.addEventListener("DOMContentLoaded", () => {
             event => {
 
                 event.stopPropagation();
+
 
                 headerMenu?.classList.toggle(
                     "show"
@@ -5257,7 +5496,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =========================================================
-       INIT
+       INITIALIZE
     ========================================================= */
 
     loadStorage();
@@ -5269,19 +5508,29 @@ document.addEventListener("DOMContentLoaded", () => {
         "CivicAI Life Helper initialized."
     );
 
+
     console.log(
-        "Chat:",
+        "Chat API:",
         CHAT_API_ENDPOINT
     );
 
+
     console.log(
-        "Transcription:",
+        "Analyze API:",
+        ANALYZE_API_ENDPOINT
+    );
+
+
+    console.log(
+        "Transcription API:",
         TRANSCRIBE_API_ENDPOINT
     );
 
+
     console.log(
-        "Voice input: MediaRecorder + Groq Whisper"
+        "Voice input: MediaRecorder → /api/transcribe → Whisper"
     );
+
 
     console.log(
         "Voice output: Browser SpeechSynthesis"
@@ -5309,14 +5558,10 @@ document.addEventListener("DOMContentLoaded", () => {
         "civicai_assistant_position_v4";
 
 
-    let dragging =
-        false;
+    let dragging = false;
 
-    let offsetX =
-        0;
-
-    let offsetY =
-        0;
+    let offsetX = 0;
+    let offsetY = 0;
 
 
     function clampPosition(
@@ -5328,8 +5573,7 @@ document.addEventListener("DOMContentLoaded", () => {
             assistant.getBoundingClientRect();
 
 
-        const margin =
-            8;
+        const margin = 8;
 
 
         const maxX =
@@ -5360,6 +5604,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         maxX
                     )
                 ),
+
 
             y:
                 Math.max(
@@ -5429,8 +5674,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         const mobile =
-            window.innerWidth <=
-            850;
+            window.innerWidth <= 850;
 
 
         const x =
@@ -5476,12 +5720,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (
                 saved &&
-                Number.isFinite(
-                    saved.x
-                ) &&
-                Number.isFinite(
-                    saved.y
-                )
+                Number.isFinite(saved.x) &&
+                Number.isFinite(saved.y)
             ) {
 
                 setPosition(
@@ -5509,13 +5749,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    function startDrag(
-        event
-    ) {
+    function startDrag(event) {
 
         if (
-            event.pointerType ===
-                "mouse" &&
+            event.pointerType === "mouse" &&
             event.button !== 0
         ) {
 
@@ -5525,12 +5762,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         /*
-           Do not start dragging when
-           clicking the Voice button.
+           Do NOT drag when clicking voice button.
         */
+
         if (
             event.target.closest(
                 ".voice-toggle"
+            ) ||
+            event.target.closest(
+                "#voiceButton"
+            )
+        ) {
+
+            return;
+
+        }
+
+
+        /*
+           Do not drag buttons,
+           inputs or interactive elements.
+        */
+
+        if (
+            event.target.closest(
+                "button, input, textarea, select, a"
             )
         ) {
 
@@ -5553,8 +5809,7 @@ document.addEventListener("DOMContentLoaded", () => {
             rect.top;
 
 
-        dragging =
-            true;
+        dragging = true;
 
 
         assistant.classList.add(
@@ -5576,9 +5831,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    function moveDrag(
-        event
-    ) {
+    function moveDrag(event) {
 
         if (!dragging) return;
 
@@ -5599,15 +5852,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    function stopDrag(
-        event
-    ) {
+    function stopDrag(event) {
 
         if (!dragging) return;
 
 
-        dragging =
-            false;
+        dragging = false;
 
 
         assistant.classList.remove(
@@ -5696,7 +5946,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 })();
 </script>
-
 
 </body>
 </html>

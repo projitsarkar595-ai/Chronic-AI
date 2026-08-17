@@ -1,8 +1,8 @@
 // ============================================================
-// ChronicAi — FINAL COMPLETE SERVER.JS
+// CIVICAI — FINAL COMPLETE SERVER.JS
 // ============================================================
 //
-// ChronicAi BACKEND
+// CIVICAI BACKEND
 //
 // AI ARCHITECTURE
 // ------------------------------------------------------------
@@ -13,7 +13,7 @@
 // AUTHORITY ASSISTANT   -> GROQ
 // IMAGE CHAT            -> GROQ VISION
 //
-// ChronicAi REPORT ANALYSIS -> GEMINI
+// CIVIC REPORT ANALYSIS -> GEMINI
 // PRODUCT SCANNER       -> GEMINI
 //
 // EMAIL OTP             -> GMAIL / NODEMAILER
@@ -821,7 +821,7 @@ async function callGroq({
                     controller.abort();
 
                 },
-                60_000
+                120_000
             );
 
         try {
@@ -1613,238 +1613,202 @@ app.post(
 
     }
 );
-
-// ============================================================
-// /api/chat
-// ============================================================
-//// ============================================================
-// CIVICAI — AI LIFE HELPER
-// GROQ ONLY
-// FRONTEND: POST /api/chat
-// ============================================================
-
 app.post("/api/chat", async (req, res) => {
     try {
 
-        cleanupChatSessions();
-
         const body = req.body || {};
 
-        // ----------------------------------------------------
-        // MESSAGE
-        // ----------------------------------------------------
-
-        const message = cleanText(
-            body.message ||
-            body.question ||
-            body.prompt ||
-            body.text ||
+        const text = String(
+            body.message ??
+            body.question ??
+            body.prompt ??
+            body.text ??
+            body.content ??
+            body.input ??
+            body.query ??
             ""
-        );
+        ).trim();
 
-        // ----------------------------------------------------
-        // IMAGE
-        // ----------------------------------------------------
+        const conversation =
+            Array.isArray(body.conversation)
+                ? body.conversation
+                : [];
 
-        const image = isImageDataUrl(body.image)
-            ? body.image
-            : null;
+        console.log("[CHAT] Incoming:", text);
 
-        // ----------------------------------------------------
-        // VALIDATION
-        // ----------------------------------------------------
-
-        if (!message && !image) {
+        if (!text) {
             return res.status(400).json({
                 success: false,
-                error: "Message or image is required.",
-                code: "MESSAGE_REQUIRED"
+                error: "Message is required."
             });
         }
 
-        // ----------------------------------------------------
-        // SESSION
-        // ----------------------------------------------------
+        if (!process.env.GROQ_API_KEY) {
+            return res.status(500).json({
+                success: false,
+                error: "GROQ_API_KEY is missing."
+            });
+        }
 
-        const conversationId = getChatSessionId(body);
+        const messages = [
+            {
+                role: "system",
+                content: `
+You are CivicAI, an AI-powered civic assistant.
 
-        const session = chatSessions.get(conversationId);
+Help citizens with:
+- civic problems
+- government services
+- public safety
+- public resources
+- complaints
+- everyday civic questions
 
-        // ----------------------------------------------------
-        // HISTORY
-        // ----------------------------------------------------
-        // Your HTML sends "conversation"
-        // Older frontend may send "history"
-        // So support BOTH.
+Reply naturally and clearly.
 
-        const incomingHistory =
-            Array.isArray(body.conversation)
-                ? body.conversation
-                : body.history;
+If the user speaks Bengali, reply in Bengali.
+If the user speaks English, reply in English.
+If the user uses Banglish, reply naturally in Banglish.
 
-        const clientHistory =
-            normalizeHistory(incomingHistory);
+Do not invent official facts.
+                `.trim()
+            }
+        ];
 
-        const history =
-            clientHistory.length
-                ? clientHistory
-                : (
-                    session?.history || []
-                );
+        for (const item of conversation.slice(-20)) {
 
-        // ----------------------------------------------------
-        // GROQ
-        // ----------------------------------------------------
+            const role =
+                item?.role === "assistant"
+                    ? "assistant"
+                    : "user";
 
-        const result = await callGroq({
+            const content =
+                String(
+                    item?.content || ""
+                ).trim();
 
-            systemPrompt:
-                NORMAL_CHAT_PROMPT,
+            if (!content) continue;
 
-            userText:
-                message ||
-                "Please understand the attached image and explain what you see.",
+            messages.push({
+                role,
+                content
+            });
+        }
 
-            history,
-
-            image,
-
-            temperature: 0.55,
-
-            maxTokens: 1800,
-
-            retries: 2
-
+        messages.push({
+            role: "user",
+            content: text
         });
 
-        // ----------------------------------------------------
-        // SAVE CHAT MEMORY
-        // ----------------------------------------------------
-
-        const updatedHistory = [
-
-            ...history,
-
+        const response = await fetch(
+            "https://api.groq.com/openai/v1/chat/completions",
             {
-                role: "user",
-                content: message || "[Image]"
-            },
+                method: "POST",
 
-            {
-                role: "assistant",
-                content: result.answer
-            }
+                headers: {
+                    "Content-Type":
+                        "application/json",
 
-        ].slice(-20);
+                    "Authorization":
+                        `Bearer ${process.env.GROQ_API_KEY}`
+                },
 
-        chatSessions.set(
-            conversationId,
-            {
-                history: updatedHistory,
-                updatedAt: Date.now()
+                body: JSON.stringify({
+
+                    model:
+                        process.env.GROQ_TEXT_MODEL ||
+                        "llama-3.3-70b-versatile",
+
+                    messages,
+
+                    temperature:
+                        0.55,
+
+                    max_completion_tokens:
+                        1200,
+
+                    top_p:
+                        1,
+
+                    stream:
+                        false
+
+                })
             }
         );
 
-        // ----------------------------------------------------
-        // RESPONSE
-        // ----------------------------------------------------
-        // Multiple response names are intentionally kept
-        // because your frontend supports all of them.
+        const raw = await response.text();
+
+        console.log(
+            "[CHAT] Groq status:",
+            response.status
+        );
+
+        let data = {};
+
+        try {
+            data = JSON.parse(raw);
+        } catch {
+            return res.status(502).json({
+                success: false,
+                error:
+                    "Groq returned invalid JSON."
+            });
+        }
+
+        if (!response.ok) {
+            return res.status(response.status).json({
+                success: false,
+                error:
+                    data?.error?.message ||
+                    "Groq chat request failed."
+            });
+        }
+
+        const answer =
+            String(
+                data?.choices?.[0]?.message?.content ||
+                ""
+            ).trim();
+
+        if (!answer) {
+            return res.status(502).json({
+                success: false,
+                error:
+                    "Groq returned an empty response."
+            });
+        }
+
+        console.log(
+            "[CHAT] AI response received."
+        );
 
         return res.json({
-
             success: true,
-
-            provider: "Groq",
-
-            model:
-                result.model || null,
-
-            answer:
-                result.answer || "",
-
-            message:
-                result.answer || "",
-
-            reply:
-                result.answer || "",
-
-            response:
-                result.answer || "",
-
-            conversationId,
-
-            usage:
-                result.usage || null
-
+            text: answer,
+            answer: answer,
+            reply: answer,
+            response: answer
         });
 
     } catch (error) {
 
-        console.error("");
         console.error(
-            "================================================"
+            "[CHAT ERROR]",
+            error
         );
-        console.error(
-            "CIVICAI AI LIFE HELPER — GROQ ERROR"
-        );
-        console.error(
-            error?.message || error
-        );
-        console.error(
-            "================================================"
-        );
-        console.error("");
 
-        const errorMessage =
-            String(
-                error?.message ||
-                "Groq AI failed to generate a response."
-            );
-
-        let statusCode = 500;
-
-        if (
-            errorMessage.includes("401")
-        ) {
-            statusCode = 401;
-        }
-        else if (
-            errorMessage.includes("403")
-        ) {
-            statusCode = 403;
-        }
-        else if (
-            errorMessage.includes("400")
-        ) {
-            statusCode = 400;
-        }
-        else if (
-            errorMessage.includes("429")
-        ) {
-            statusCode = 429;
-        }
-        else if (
-            /timeout|timed out|ETIMEDOUT/i.test(
-                errorMessage
-            )
-        ) {
-            statusCode = 504;
-        }
-
-        return res.status(statusCode).json({
-
+        return res.status(500).json({
             success: false,
-
-            provider: "Groq",
-
-            error: errorMessage,
-
-            code: "GROQ_CHAT_ERROR"
-
+            error:
+                error?.message ||
+                "Chat request failed."
         });
+
     }
 });
+
+
 // 
 // ============================================================
 // GEMINI ERROR
@@ -1877,6 +1841,7 @@ function getGeminiError(text) {
 // ============================================================
 // GEMINI API
 // ============================================================
+
 
 async function callGemini({
 
@@ -2071,15 +2036,6 @@ async function callGemini({
                     "Gemini returned invalid JSON."
                 );
 
-            }
-
-            function extractGeminiText(data) {
-                try {
-                    // Gemini response structure
-                    return data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
-                } catch (error) {
-                    return null;
-                }
             }
 
             const answer =
@@ -2794,11 +2750,11 @@ Analyze this product.
                         PRODUCT_SCHEMA,
 
                     maxOutputTokens:
-                        1800,
+                        900,
 
                     retries:
-                        1
-
+                        1,
+                    temperature: 0.1,
                 });
 
             const result =

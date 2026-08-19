@@ -12,10 +12,10 @@
 
     <meta
         name="description"
-        content="ChronicAi — Track your submitted civic report"
+        content="ChronicAI — Track your submitted civic report"
     >
 
-    <title>ChronicAi — Track Report</title>
+    <title>ChronicAI — Track Report</title>
 
 
     <!-- =====================================================
@@ -36,12 +36,7 @@
         rel="stylesheet"
         href="global.css"
     >
-    
-    <link
-        rel="icon"
-        type="image/svg+xml"
-        href="icon.svg"
-    >
+
 
     <!-- =====================================================
          PAGE STYLES
@@ -1618,7 +1613,7 @@
 
                 <p>
 
-                    Enter your CivicAI report ID below
+                    Enter your ChronicAI report ID below
                     to check the current status and
                     details of your submitted civic issue.
 
@@ -1662,7 +1657,7 @@
                         <input
                             type="text"
                             id="reportIdInput"
-                            placeholder="Example: CIVIC-12345678-1234"
+                            placeholder="Example: CHRONIC-12345678-1234"
                             autocomplete="off"
                             spellcheck="false"
                         >
@@ -2290,7 +2285,7 @@
         ====================================================== */
 
         const API_BASE =
-            window.CIVICAI_API_URL ||
+            window.CHRONICAI_API_URL ||
             "";
 
 
@@ -2800,7 +2795,7 @@
             if (!reportId) {
 
                 showMessage(
-                    "Please enter your CivicAI report ID.",
+                    "Please enter your ChronicAI report ID.",
                     "error"
                 );
 
@@ -3091,7 +3086,7 @@
            AUTO LOAD FROM URL
            
            Example:
-           track.html?id=CIVIC-12345678-1234
+           track.html?id=CHRONIC-12345678-1234
         ====================================================== */
 
         const urlParams =
@@ -3133,7 +3128,7 @@
         ====================================================== */
 
         console.log(
-            "CivicAI Track System initialized successfully 🚀"
+            "ChronicAI Track System initialized successfully 🚀"
         );
 
     </script>

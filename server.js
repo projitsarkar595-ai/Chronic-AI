@@ -1,8 +1,8 @@
 // ============================================================
-// CIVICAI — FINAL COMPLETE SERVER.JS
+//  CHRONICAI — FINAL COMPLETE SERVER.JS
 // ============================================================
 //
-// CIVICAI BACKEND
+// CHRONICAI BACKEND
 //
 // AI ARCHITECTURE
 // ------------------------------------------------------------
@@ -37,7 +37,6 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
-import twilio from "twilio";
 import { fileURLToPath } from "url";
 import multer from "multer";
 
@@ -370,52 +369,6 @@ if (
 }
 
 // ============================================================
-// TWILIO CONFIGURATION
-// ============================================================
-
-const TWILIO_ACCOUNT_SID =
-    cleanText(
-        process.env.TWILIO_ACCOUNT_SID
-    );
-
-const TWILIO_AUTH_TOKEN =
-    cleanText(
-        process.env.TWILIO_AUTH_TOKEN
-    );
-
-const TWILIO_PHONE_NUMBER =
-    cleanText(
-        process.env.TWILIO_PHONE_NUMBER
-    );
-
-let twilioClient = null;
-
-if (
-    TWILIO_ACCOUNT_SID &&
-    TWILIO_AUTH_TOKEN &&
-    TWILIO_PHONE_NUMBER
-) {
-
-    try {
-
-        twilioClient =
-            twilio(
-                TWILIO_ACCOUNT_SID,
-                TWILIO_AUTH_TOKEN
-            );
-
-    } catch (error) {
-
-        console.error(
-            "TWILIO INITIALIZATION ERROR:",
-            error?.message || error
-        );
-
-    }
-
-}
-
-// ============================================================
 // CONFIG CHECK
 // ============================================================
 
@@ -441,14 +394,6 @@ function hasEmailConfig() {
 
     return Boolean(
         emailTransporter
-    );
-
-}
-
-function hasTwilioConfig() {
-
-    return Boolean(
-        twilioClient
     );
 
 }
@@ -1043,10 +988,10 @@ async function callGroq({
 
 const NORMAL_CHAT_PROMPT = `
 
-You are CivicAI AI Life Helper.
+You are     ChronicAI AI Life Helper.
 
 You are the main conversational AI assistant
-inside the CivicAI website.
+inside the ChronicAI website.
 
 You are powered by Groq.
 
@@ -1143,7 +1088,7 @@ You can explain:
 - What information the citizen should collect.
 - What practical next step may help.
 
-But do not say that CivicAI submitted a complaint
+But do not say that ChronicAI submitted a complaint
 unless the report endpoint was actually called
 and successfully returned a submission result.
 
@@ -1235,7 +1180,7 @@ FINAL RULE
 Answer the user's question naturally and helpfully.
 `;
 // ============================================================
-// CIVICAI — VOICE TRANSCRIPTION
+// CHRONICAI — VOICE TRANSCRIPTION
 // ============================================================
 // Browser audio
 //       ↓
@@ -1261,7 +1206,7 @@ const voiceUpload = multer({
 // /api/transcribe
 // ============================================================
 // ============================================================
-// CIVICAI — VOICE TRANSCRIPTION
+// CHRONICAI — VOICE TRANSCRIPTION
 // GROQ WHISPER
 // ============================================================
 
@@ -1412,7 +1357,7 @@ app.post(
                     [
                         req.file.buffer
                     ],
-                    `civicai-audio.${extension}`,
+                    `chronicai-audio.${extension}`,
                     {
                         type: mimeType
                     }
@@ -1510,7 +1455,7 @@ app.post(
             );
 
             console.error(
-                "CIVICAI / GROQ TRANSCRIPTION ERROR"
+                "CHRONICAI / GROQ TRANSCRIPTION ERROR"
             );
 
             console.error(
@@ -1654,7 +1599,7 @@ app.post("/api/chat", async (req, res) => {
             {
                 role: "system",
                 content: `
-You are CivicAI, an AI-powered civic assistant.
+You are ChronicAI, an AI-powered chronic assistant.
 
 Help citizens with:
 - civic problems
@@ -1836,6 +1781,73 @@ function getGeminiError(text) {
 
     }
 
+}
+// ============================================================
+// GEMINI RESPONSE TEXT EXTRACTOR
+// ============================================================
+
+function extractGeminiText(data) {
+    try {
+        if (!data) {
+            return "";
+        }
+
+        // Standard Gemini REST API response
+        const parts =
+            data?.candidates?.[0]?.content?.parts;
+
+        if (Array.isArray(parts)) {
+            const text = parts
+                .map(part => {
+                    if (typeof part?.text === "string") {
+                        return part.text;
+                    }
+
+                    return "";
+                })
+                .join("")
+                .trim();
+
+            if (text) {
+                return text;
+            }
+        }
+
+        // Direct text fallback
+        if (typeof data?.text === "string") {
+            return data.text.trim();
+        }
+
+        // Response object fallback
+        if (
+            typeof data?.response?.text === "function"
+        ) {
+            const text =
+                data.response.text();
+
+            if (typeof text === "string") {
+                return text.trim();
+            }
+        }
+
+        // Some Gemini response formats
+        if (
+            typeof data?.candidates?.[0]?.output === "string"
+        ) {
+            return data.candidates[0].output.trim();
+        }
+
+        return "";
+
+    } catch (error) {
+
+        console.error(
+            "GEMINI TEXT EXTRACTION ERROR:",
+            error?.message || error
+        );
+
+        return "";
+    }
 }
 
 // ============================================================
@@ -2045,6 +2057,11 @@ async function callGemini({
 
             if (!answer) {
 
+                console.error(
+                    "GEMINI EMPTY RESPONSE:",
+                    JSON.stringify(data, null, 2)
+                );
+
                 throw new Error(
                     "Gemini returned an empty response."
                 );
@@ -2089,72 +2106,169 @@ async function callGemini({
 // ============================================================
 // JSON PARSER
 // ============================================================
+// ============================================================
+// ROBUST AI JSON PARSER
+// ============================================================
 
 function parseAIJSON(text) {
 
-    let cleaned =
-        cleanText(text);
+    if (text === undefined || text === null) {
+        throw new Error("AI returned empty response.");
+    }
 
-    cleaned =
-        cleaned
-            .replace(
-                /^```json\s*/i,
-                ""
-            )
-            .replace(
-                /^```\s*/i,
-                ""
-            )
-            .replace(
-                /\s*```$/i,
-                ""
-            );
+    let cleaned = String(text)
+        .trim()
+        .replace(/^\uFEFF/, "");
+
+    // Remove markdown code fences
+    cleaned = cleaned
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
+
+    // --------------------------------------------------------
+    // 1. Direct JSON
+    // --------------------------------------------------------
 
     try {
+        return JSON.parse(cleaned);
+    } catch (_) {}
 
-        return JSON.parse(
-            cleaned
-        );
+    // --------------------------------------------------------
+    // 2. Extract JSON object
+    // --------------------------------------------------------
 
-    } catch {}
-
-    const start =
-        cleaned.indexOf("{");
-
-    const end =
-        cleaned.lastIndexOf("}");
+    const objectStart = cleaned.indexOf("{");
+    const objectEnd = cleaned.lastIndexOf("}");
 
     if (
-        start !== -1 &&
-        end > start
+        objectStart !== -1 &&
+        objectEnd !== -1 &&
+        objectEnd > objectStart
     ) {
+        const candidate = cleaned
+            .slice(objectStart, objectEnd + 1)
+            .trim();
 
         try {
-
-            return JSON.parse(
-                cleaned.slice(
-                    start,
-                    end + 1
-                )
-            );
-
-        } catch {}
-
+            return JSON.parse(candidate);
+        } catch (_) {}
     }
+
+    // --------------------------------------------------------
+    // 3. Extract JSON array
+    // --------------------------------------------------------
+
+    const arrayStart = cleaned.indexOf("[");
+    const arrayEnd = cleaned.lastIndexOf("]");
+
+    if (
+        arrayStart !== -1 &&
+        arrayEnd !== -1 &&
+        arrayEnd > arrayStart
+    ) {
+        const candidate = cleaned
+            .slice(arrayStart, arrayEnd + 1)
+            .trim();
+
+        try {
+            return JSON.parse(candidate);
+        } catch (_) {}
+    }
+
+    // --------------------------------------------------------
+    // 4. Try removing common AI prefixes
+    // --------------------------------------------------------
+
+    const prefixes = [
+        "Here is the JSON:",
+        "Here is the JSON",
+        "JSON:",
+        "Response:",
+        "Result:"
+    ];
+
+    for (const prefix of prefixes) {
+
+        if (
+            cleaned
+                .toLowerCase()
+                .startsWith(prefix.toLowerCase())
+        ) {
+
+            const candidate =
+                cleaned
+                    .slice(prefix.length)
+                    .trim();
+
+            try {
+                return JSON.parse(candidate);
+            } catch (_) {}
+
+            const start =
+                candidate.indexOf("{");
+
+            const end =
+                candidate.lastIndexOf("}");
+
+            if (
+                start !== -1 &&
+                end > start
+            ) {
+                try {
+                    return JSON.parse(
+                        candidate.slice(
+                            start,
+                            end + 1
+                        )
+                    );
+                } catch (_) {}
+            }
+        }
+    }
+
+    // --------------------------------------------------------
+    // DEBUG
+    // --------------------------------------------------------
+
+    console.error(
+        "\n================================================"
+    );
+
+    console.error(
+        "❌ AI JSON PARSE FAILED"
+    );
+
+    console.error(
+        "RAW AI RESPONSE:"
+    );
+
+    console.error(
+        cleaned.substring(0, 2000)
+    );
+
+    if (cleaned.length > 2000) {
+        console.error(
+            `... (${cleaned.length - 2000} more characters)`
+        );
+    }
+
+    console.error(
+        "================================================\n"
+    );
 
     throw new Error(
         "AI returned invalid JSON."
     );
-
 }
-
 // ============================================================
 // CIVIC REPORT PROMPT
 // ============================================================
 
-const CIVIC_SYSTEM_PROMPT = `
+const CHRONIC_SYSTEM_PROMPT = `
 
-You are CivicAI Civic Report Analysis AI.
+You are ChronicAI Civic Report Analysis AI.
 
 Analyze the citizen's civic problem.
 
@@ -2202,10 +2316,10 @@ Return ONLY valid JSON.
 `;
 
 // ============================================================
-// CIVIC SCHEMA
+// CHRONIC SCHEMA
 // ============================================================
 
-const CIVIC_SCHEMA = {
+const CHRONIC_SCHEMA = {
 
     type:
         "object",
@@ -2384,7 +2498,7 @@ Analyze this civic report.
                 await callGemini({
 
                     systemPrompt:
-                        CIVIC_SYSTEM_PROMPT,
+                        CHRONIC_SYSTEM_PROMPT,
 
                     userText,
 
@@ -2394,7 +2508,7 @@ Analyze this civic report.
                         true,
 
                     responseSchema:
-                        CIVIC_SCHEMA,
+                        CHRONIC_SCHEMA,
 
                     maxOutputTokens:
                         2000,
@@ -2427,7 +2541,7 @@ Analyze this civic report.
         } catch (error) {
 
             console.error(
-                "GEMINI CIVIC ANALYSIS ERROR:",
+                "GEMINI CHRONIC ANALYSIS ERROR:",
                 error?.message || error
             );
 
@@ -2453,7 +2567,7 @@ Analyze this civic report.
 
                     error:
                         message ||
-                        "Civic analysis failed.",
+                        "Chronic analysis failed.",
 
                     code:
                         message.includes("429")
@@ -2473,7 +2587,7 @@ Analyze this civic report.
 
 const PRODUCT_SYSTEM_PROMPT = `
 
-You are CivicAI Product Scanner AI.
+You are ChronicAI Product Scanner AI.
 
 Analyze the consumer product using:
 
@@ -2829,7 +2943,7 @@ Analyze this product.
 
 const PRODUCT_CHAT_PROMPT = `
 
-You are CivicAI Product Live Helper.
+You are ChronicAI Product Live Helper.
 
 You are a conversational product assistant.
 
@@ -3077,7 +3191,7 @@ Answer naturally.
 
 const AUTHORITY_PROMPT = `
 
-You are CivicAI Authority Assistant.
+You are ChronicAI Authority Assistant.
 
 Help identify the appropriate authority
 for a civic problem.
@@ -3239,7 +3353,7 @@ Suggest the responsible authority.
     }
 );
 // ============================================================
-// CIVICAI — SECURE OTP SYSTEM
+// CHRONICAI — SECURE OTP SYSTEM
 // ============================================================
 //
 // EMAIL OTP  -> Nodemailer / Gmail
@@ -3938,6 +4052,11 @@ async function sendEmailOtp(
         otp
     );
 
+    // DEBUG: Log OTP for development
+    console.log(
+        `\n📧 OTP Generated for ${email}: ${otp}\n`
+    );
+
     await emailTransporter.sendMail({
 
         from:
@@ -3947,10 +4066,10 @@ async function sendEmailOtp(
             email,
 
         subject:
-            "CivicAI Verification OTP",
+            "ChronicAI Verification OTP",
 
         text:
-            `Your CivicAI verification OTP is ${otp}. This OTP expires in 5 minutes.`,
+            `Your ChronicAI verification OTP is ${otp}. This OTP expires in 5 minutes.`,
 
         html:
             `
@@ -3979,7 +4098,7 @@ async function sendEmailOtp(
                 >
 
                     <h2>
-                        CivicAI Verification
+                        ChronicAI Verification
                     </h2>
 
                     <p>
@@ -4019,46 +4138,384 @@ async function sendEmailOtp(
 }
 
 
-// ============================================================
-// SEND PHONE OTP
-// ============================================================
 
-async function sendPhoneOtp(
-    phone
+async function handleOtpSendRequest(
+    req,
+    res
 ) {
 
-    if (
-        !twilioClient
-    ) {
+    try {
 
-        throw new Error(
-            "Twilio is not configured correctly."
+        const rawType =
+            cleanText(
+                req.body?.type
+            )
+            .toLowerCase();
+
+        const type =
+            rawType === "email" || rawType === "phone"
+                ? rawType
+                : req.body?.email
+                    ? "email"
+                    : req.body?.phone
+                        ? "phone"
+                        : "";
+
+        let identifier =
+            cleanText(
+                req.body?.identifier ?? req.body?.email ?? req.body?.phone
+            );
+
+        if (
+            !type
+        ) {
+
+            return res
+                .status(400)
+                .json({
+
+                    success:
+                        false,
+
+                    error:
+                        "OTP type must be email or phone."
+
+                });
+
+        }
+
+        if (
+            type === "email"
+        ) {
+
+            identifier =
+                normalizeEmail(
+                    identifier
+                );
+
+            if (
+                !isValidEmail(
+                    identifier
+                )
+            ) {
+
+                return res
+                    .status(400)
+                    .json({
+
+                        success:
+                            false,
+
+                        error:
+                            "Valid email is required."
+
+                    });
+
+            }
+
+        } else {
+
+            identifier =
+                normalizePhone(
+                    identifier
+                );
+
+            if (
+                !isValidPhone(
+                    identifier
+                )
+            ) {
+
+                return res
+                    .status(400)
+                    .json({
+
+                        success:
+                            false,
+
+                        error:
+                            "Use a valid phone number with country code. Example: +919876543210"
+
+                    });
+
+            }
+
+        }
+
+        const rate =
+            checkOtpRequestRate(
+                identifier
+            );
+
+        if (
+            !rate.allowed
+        ) {
+
+            if (
+                rate.retryAfter
+            ) {
+
+                res.setHeader(
+                    "Retry-After",
+                    String(
+                        rate.retryAfter
+                    )
+                );
+
+            }
+
+            return res
+                .status(429)
+                .json({
+
+                    success:
+                        false,
+
+                    error:
+                        rate.error,
+
+                    code:
+                        "OTP_RATE_LIMIT"
+
+                });
+
+        }
+
+        if (
+            type === "email"
+        ) {
+
+            await sendEmailOtp(
+                identifier
+            );
+
+        } else {
+
+            await sendPhoneOtp(
+                identifier
+            );
+
+        }
+
+        return res.json({
+
+            success:
+                true,
+
+            message:
+                `OTP sent successfully to your ${type}.`,
+
+            type,
+            identifier
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "OTP SEND ERROR:",
+            error?.message || error
         );
+
+        return res
+            .status(500)
+            .json({
+
+                success:
+                    false,
+
+                error:
+                    "Failed to send OTP.",
+
+                code:
+                    "OTP_SEND_ERROR"
+
+            });
 
     }
 
-    const otp =
-        generateOTP();
+}
 
-    saveOtp(
-        phone,
-        otp
-    );
 
-    await twilioClient.messages.create({
 
-        body:
-            `CivicAI verification OTP: ${otp}. Valid for 5 minutes.`,
+function handleOtpVerifyRequest(
+    req,
+    res
+) {
 
-        from:
-            TWILIO_PHONE_NUMBER,
+    try {
 
-        to:
-            phone
+        const rawType =
+            cleanText(
+                req.body?.type
+            )
+            .toLowerCase();
 
-    });
+        const type =
+            rawType === "email" || rawType === "phone"
+                ? rawType
+                : req.body?.email
+                    ? "email"
+                    : req.body?.phone
+                        ? "phone"
+                        : "";
+
+        let identifier =
+            cleanText(
+                req.body?.identifier ?? req.body?.email ?? req.body?.phone
+            );
+
+        const otp =
+            cleanText(
+                req.body?.otp
+            );
+
+        if (
+            !type
+        ) {
+
+            return res
+                .status(400)
+                .json({
+
+                    success:
+                        false,
+
+                    error:
+                        "OTP type must be email or phone."
+
+                });
+
+        }
+
+        if (
+            !otp
+        ) {
+
+            return res
+                .status(400)
+                .json({
+
+                    success:
+                        false,
+
+                    error:
+                        "OTP is required."
+
+                });
+
+        }
+
+        if (
+            !/^\d{6}$/.test(
+                otp
+            )
+        ) {
+
+            return res
+                .status(400)
+                .json({
+
+                    success:
+                        false,
+
+                    error:
+                        "OTP must contain exactly 6 digits."
+
+                });
+
+        }
+
+        identifier =
+            type === "email"
+                ? normalizeEmail(
+                    identifier
+                )
+                : normalizePhone(
+                    identifier
+                );
+
+        const result =
+            verifyStoredOtp(
+                identifier,
+                otp
+            );
+
+        if (
+            !result.success
+        ) {
+
+            return res
+                .status(400)
+                .json({
+
+                    success:
+                        false,
+
+                    verified:
+                        false,
+
+                    error:
+                        result.error,
+
+                    code:
+                        result.code,
+
+                    attemptsRemaining:
+                        result.attemptsRemaining
+
+                });
+
+        }
+
+        return res.json({
+
+            success:
+                true,
+
+            verified:
+                true,
+
+            type,
+            identifier,
+
+            verificationToken:
+                result.verificationToken,
+
+            message:
+                `${type === "email" ? "Email" : "Phone"} verified successfully.`
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "OTP VERIFY ERROR:",
+            error?.message || error
+        );
+
+        return res
+            .status(500)
+            .json({
+
+                success:
+                    false,
+
+                verified:
+                    false,
+
+                error:
+                    "OTP verification failed.",
+
+                code:
+                    "OTP_VERIFY_ERROR"
+
+            });
+
+    }
 
 }
+
 
 
 // ============================================================
@@ -4299,179 +4756,17 @@ app.post(
 
 app.post(
     "/api/otp/verify",
-    (req, res) => {
+    handleOtpVerifyRequest
+);
 
-        try {
+app.post(
+    "/api/auth/send-otp",
+    handleOtpSendRequest
+);
 
-            const type =
-                cleanText(
-                    req.body?.type
-                )
-                .toLowerCase();
-
-            let identifier =
-                cleanText(
-                    req.body?.identifier
-                );
-
-            const otp =
-                cleanText(
-                    req.body?.otp
-                );
-
-            if (
-                type !== "email" &&
-                type !== "phone"
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success:
-                            false,
-
-                        error:
-                            "OTP type must be email or phone."
-
-                    });
-
-            }
-
-            if (!otp) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success:
-                            false,
-
-                        error:
-                            "OTP is required."
-
-                    });
-
-            }
-
-            if (
-                !/^\d{6}$/.test(
-                    otp
-                )
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success:
-                            false,
-
-                        error:
-                            "OTP must contain exactly 6 digits."
-
-                    });
-
-            }
-
-            // ------------------------------------------------
-            // NORMALIZE IDENTIFIER
-            // ------------------------------------------------
-
-            identifier =
-                type === "email"
-                    ? normalizeEmail(
-                        identifier
-                    )
-                    : normalizePhone(
-                        identifier
-                    );
-
-            // ------------------------------------------------
-            // VERIFY
-            // ------------------------------------------------
-
-            const result =
-                verifyStoredOtp(
-                    identifier,
-                    otp
-                );
-
-            if (
-                !result.success
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success:
-                            false,
-
-                        verified:
-                            false,
-
-                        error:
-                            result.error,
-
-                        code:
-                            result.code,
-
-                        attemptsRemaining:
-                            result.attemptsRemaining
-
-                    });
-
-            }
-
-            return res.json({
-
-                success:
-                    true,
-
-                verified:
-                    true,
-
-                type,
-
-                identifier,
-
-                verificationToken:
-                    result.verificationToken,
-
-                message:
-                    `${type === "email" ? "Email" : "Phone"} verified successfully.`
-
-            });
-
-        } catch (error) {
-
-            console.error(
-                "OTP VERIFY ERROR:",
-                error?.message || error
-            );
-
-            return res
-                .status(500)
-                .json({
-
-                    success:
-                        false,
-
-                    verified:
-                        false,
-
-                    error:
-                        "OTP verification failed.",
-
-                    code:
-                        "OTP_VERIFY_ERROR"
-
-                });
-
-        }
-
-    }
+app.post(
+    "/api/auth/verify-otp",
+    handleOtpVerifyRequest
 );
 
 
@@ -5012,7 +5307,7 @@ function writeReports(
 
 app.post(
     "/api/reports",
-    (req, res) => {
+    async (req, res) => {
 
         try {
 
@@ -5147,7 +5442,7 @@ app.post(
 
                 reportId:
                     generateSecureId(
-                        "CIVIC-"
+                        "CHRONIC-"
                     ),
 
                 reporterName:
@@ -5247,6 +5542,119 @@ app.post(
             writeReports(
                 reports
             );
+
+            // ------------------------------------------------
+            // SEND ADMIN EMAIL NOTIFICATION
+            // ------------------------------------------------
+
+            if (emailTransporter) {
+                try {
+                    const adminEmail = EMAIL_FROM;
+                    const reportUrl = `http://localhost:${PORT}/api/reports/${report.reportId}`;
+                    
+                    const adminEmailText = `
+
+NEW CHRONICAI CIVIC REPORT SUBMITTED
+
+========================================
+
+Report ID:
+${report.reportId}
+
+Citizen Name:
+${report.reporterName}
+
+Email:
+${report.email || "Not provided"}
+
+Phone:
+${report.phone || "Not provided"}
+
+Location:
+${report.location || "Not provided"}
+
+Verification Method:
+${report.verificationMethod}
+
+========================================
+
+PROBLEM DESCRIPTION
+
+${report.description || "Not provided"}
+
+========================================
+
+AI ANALYSIS
+
+Problem Category:
+${report.analysis?.category || "Not available"}
+
+Severity:
+${report.analysis?.severity || "Not available"}
+
+Risk Level:
+${report.analysis?.risk || "Not available"}
+
+Summary:
+${report.analysis?.summary || "Not available"}
+
+Recommendation:
+${report.analysis?.recommendation || "Not available"}
+
+Responsible Department:
+${report.analysis?.department || "Not available"}
+
+========================================
+
+VIEW FULL REPORT
+
+${reportUrl}
+
+========================================
+
+This notification was generated by ChronicAI.
+`;
+
+                    await emailTransporter.sendMail({
+                        from: EMAIL_FROM,
+                        to: adminEmail,
+                        subject: `🚨 ChronicAI New Report: ${report.analysis?.category || "Civic Issue"} - ${report.reportId}`,
+                        text: adminEmailText,
+                        html: `
+                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                                <h2 style="color: #d9534f;">🚨 NEW ChronicAI REPORT</h2>
+                                <p><strong>Report ID:</strong> ${report.reportId}</p>
+                                <p><strong>Citizen:</strong> ${report.reporterName}</p>
+                                <p><strong>Email:</strong> ${report.email || "Not provided"}</p>
+                                <p><strong>Location:</strong> ${report.location || "Not provided"}</p>
+                                <hr />
+                                <h3>Problem</h3>
+                                <p>${report.description || "Not provided"}</p>
+                                <h3>Analysis</h3>
+                                <ul>
+                                    <li><strong>Category:</strong> ${report.analysis?.category || "N/A"}</li>
+                                    <li><strong>Severity:</strong> ${report.analysis?.severity || "N/A"}</li>
+                                    <li><strong>Risk:</strong> ${report.analysis?.risk || "N/A"}</li>
+                                    <li><strong>Department:</strong> ${report.analysis?.department || "N/A"}</li>
+                                </ul>
+                                <p><strong>Recommendation:</strong> ${report.analysis?.recommendation || "N/A"}</p>
+                                <hr />
+                                <p><a href="${reportUrl}" style="background: #5cb85c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">View Full Report</a></p>
+                            </div>
+                        `
+                    });
+
+                    console.log(
+                        `\n📧 Admin notification sent for report ${report.reportId}\n`
+                    );
+                } catch (emailError) {
+                    console.error(
+                        "ADMIN EMAIL NOTIFICATION ERROR:",
+                        emailError?.message || emailError
+                    );
+                    // Don't fail the report submission if email fails
+                }
+            }
 
             // ------------------------------------------------
             // RESPONSE
@@ -5450,7 +5858,7 @@ app.post(
 
             const text = `
 
-CIVICAI CIVIC COMPLAINT
+CHRONICAI CIVIC COMPLAINT
 
 ========================================
 
@@ -5523,7 +5931,7 @@ ${analysis.recommendation || "Not available"}
 
 ========================================
 
-This complaint was generated through CivicAI.
+This complaint was generated through ChronicAI.
 
 `;
 
@@ -5537,8 +5945,8 @@ This complaint was generated through CivicAI.
 
                     subject:
                         reportId
-                            ? `CivicAI Complaint - ${reportId}`
-                            : "CivicAI Civic Complaint",
+                            ? `ChronicAI Complaint - ${reportId}`
+                            : "ChronicAI Civic Complaint",
 
                     text
 
@@ -5622,10 +6030,10 @@ app.post(
                     to,
 
                     subject:
-                        "CivicAI Gmail Test",
+                        "ChronicAI Gmail Test",
 
                     text:
-                        "CivicAI Gmail integration is working successfully."
+                        "ChronicAI Gmail integration is working successfully."
 
                 });
 
@@ -5733,7 +6141,7 @@ app.get(
 
                 },
 
-                civicAnalysis: {
+                chronicAnalysis: {
 
                     provider:
                         "Google Gemini",
@@ -5781,13 +6189,6 @@ app.get(
                     configured:
                         hasEmailConfig()
 
-                },
-
-                twilio: {
-
-                    configured:
-                        hasTwilioConfig()
-
                 }
 
             },
@@ -5818,7 +6219,7 @@ app.get(
                 "online",
 
             service:
-                "CivicAI Backend",
+                "ChronicAI Backend",
 
             ai: {
 
@@ -5834,7 +6235,7 @@ app.get(
                 imageChat:
                     "Groq",
 
-                civicAnalysis:
+                chronicAnalysis:
                     "Google Gemini",
 
                 productScanner:
@@ -5855,9 +6256,6 @@ app.get(
 
                 gmail:
                     hasEmailConfig(),
-
-                twilio:
-                    hasTwilioConfig()
 
             },
 
@@ -5897,7 +6295,7 @@ app.get(
                 true,
 
             message:
-                "CivicAI backend API is running.",
+                "ChronicAI backend API is running.",
 
             endpoints: {
 
@@ -6175,7 +6573,7 @@ app.listen(
         );
 
         console.log(
-            "                 CIVICAI BACKEND"
+            "                 CHRONICAI BACKEND"
         );
 
         console.log(
@@ -6242,7 +6640,7 @@ app.listen(
 
         console.log(
 
-            "Civic Report AI    :",
+            "Chronic Report AI    :",
 
             hasGeminiKey()
                 ? `GEMINI (${GEMINI_MODEL})`
@@ -6285,16 +6683,6 @@ app.listen(
             "Gmail OTP          :",
 
             hasEmailConfig()
-                ? "CONFIGURED"
-                : "NOT CONFIGURED"
-
-        );
-
-        console.log(
-
-            "Twilio OTP         :",
-
-            hasTwilioConfig()
                 ? "CONFIGURED"
                 : "NOT CONFIGURED"
 

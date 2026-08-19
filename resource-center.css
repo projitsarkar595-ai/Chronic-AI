@@ -1,5 +1,5 @@
 /* =========================================================
-   ChronicAi RESOURCE CENTER
+   CHRONICAI RESOURCE CENTER
 ========================================================= */
 
 :root {
@@ -2876,11 +2876,11 @@ body {
 
 
 /* =========================================================
-   CIVICAI QUICK HELP CARD
+   CHRONICAI QUICK HELP CARD
    THIS IS THE IMPORTANT NUMBER SECTION
 ========================================================= */
 
-.civicai-quick-help-card {
+.chronicai-quick-help-card {
 
     width:
         100%;
@@ -2944,7 +2944,7 @@ body {
 }
 
 
-.civicai-quick-help-card:hover {
+.chronicai-quick-help-card:hover {
 
     transform:
         translateY(-2px);
@@ -2958,7 +2958,7 @@ body {
 }
 
 
-.civicai-quick-help-icon {
+.chronicai-quick-help-icon {
 
     width:
         48px;
@@ -2989,7 +2989,7 @@ body {
 }
 
 
-.civicai-quick-help-content {
+.chronicai-quick-help-content {
 
     min-width:
         0;
@@ -2999,7 +2999,7 @@ body {
 }
 
 
-.civicai-quick-help-content span {
+.chronicai-quick-help-content span {
 
     display:
         block;
@@ -3018,7 +3018,7 @@ body {
 }
 
 
-.civicai-quick-help-content strong {
+.chronicai-quick-help-content strong {
 
     display:
         block;
@@ -3044,7 +3044,7 @@ body {
 }
 
 
-.civicai-quick-help-content small {
+.chronicai-quick-help-content small {
 
     display:
         block;
@@ -3060,7 +3060,7 @@ body {
 }
 
 
-.civicai-quick-help-call {
+.chronicai-quick-help-call {
 
     min-width:
         60px;
@@ -3104,7 +3104,7 @@ body {
 }
 
 
-.civicai-quick-help-call i {
+.chronicai-quick-help-call i {
 
     font-size:
         14px;
@@ -3518,7 +3518,7 @@ body {
     }
 
 
-    .civicai-quick-help-card {
+    .chronicai-quick-help-card {
 
         min-height:
             84px;
@@ -3528,7 +3528,7 @@ body {
     }
 
 
-    .civicai-quick-help-icon {
+    .chronicai-quick-help-icon {
 
         width:
             42px;
@@ -3541,14 +3541,14 @@ body {
     }
 
 
-    .civicai-quick-help-content strong {
+    .chronicai-quick-help-content strong {
 
         font-size:
             17px;
     }
 
 
-    .civicai-quick-help-call {
+    .chronicai-quick-help-call {
 
         min-width:
             48px;
@@ -3562,28 +3562,28 @@ body {
 
 @media (max-width: 400px) {
 
-    .civicai-quick-help-card {
+    .chronicai-quick-help-card {
 
         gap:
             9px;
     }
 
 
-    .civicai-quick-help-call {
+    .chronicai-quick-help-call {
 
         min-width:
             42px;
     }
 
 
-    .civicai-quick-help-call span {
+    .chronicai-quick-help-call span {
 
         display:
             none;
     }
 
 
-    .civicai-quick-help-content strong {
+    .chronicai-quick-help-content strong {
 
         font-size:
             15px;

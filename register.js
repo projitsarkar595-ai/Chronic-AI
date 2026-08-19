@@ -1,5 +1,5 @@
 // ============================================================
-// ChronicAi — REGISTER / CREATE CITIZEN ACCOUNT
+// CHRONICAI — REGISTER / CREATE CITIZEN ACCOUNT
 // ============================================================
 // FLOW:
 //
@@ -80,37 +80,37 @@ const termsInput =
 
 if (!registerForm) {
     console.error(
-        "CivicAI ERROR: registerForm was not found."
+        "ChronicAI ERROR: registerForm was not found."
     );
 }
 
 if (!registerButton) {
     console.error(
-        "CivicAI ERROR: registerButton was not found."
+        "ChronicAI ERROR: registerButton was not found."
     );
 }
 
 if (!nameInput) {
     console.error(
-        "CivicAI ERROR: name input was not found."
+        "ChronicAI ERROR: name input was not found."
     );
 }
 
 if (!emailInput) {
     console.error(
-        "CivicAI ERROR: email input was not found."
+        "ChronicAI ERROR: email input was not found."
     );
 }
 
 if (!passwordInput) {
     console.error(
-        "CivicAI ERROR: password input was not found."
+        "ChronicAI ERROR: password input was not found."
     );
 }
 
 if (!confirmPasswordInput) {
     console.error(
-        "CivicAI ERROR: confirmPassword input was not found."
+        "ChronicAI ERROR: confirmPassword input was not found."
     );
 }
 
@@ -418,23 +418,23 @@ function getFirebaseErrorMessage(
 function clearOldSession() {
 
     localStorage.removeItem(
-        "civicAIUser"
+        "chronicAIUser"
     );
 
     localStorage.removeItem(
-        "civicAILoggedIn"
+        "chronicAILoggedIn"
     );
 
     localStorage.removeItem(
-        "civicAIUserId"
+        "chronicAIUserId"
     );
 
     localStorage.removeItem(
-        "civicAIUserEmail"
+        "chronicAIUserEmail"
     );
 
     localStorage.removeItem(
-        "civicAIUserName"
+        "chronicAIUserName"
     );
 }
 
@@ -601,7 +601,7 @@ if (registerForm) {
             );
 
             showMessage(
-                "Creating your CivicAI citizen account..."
+                "Creating your ChronicAI citizen account..."
             );
 
             try {
@@ -611,7 +611,7 @@ if (registerForm) {
                 // =================================================
 
                 console.log(
-                    "CivicAI: Creating Firebase Authentication account..."
+                    "ChronicAI: Creating Firebase Authentication account..."
                 );
 
                 const userCredential =
@@ -632,7 +632,7 @@ if (registerForm) {
                 }
 
                 console.log(
-                    "CivicAI: Firebase account created:",
+                    "ChronicAI: Firebase account created:",
                     user.uid
                 );
 
@@ -655,7 +655,7 @@ if (registerForm) {
                 ) {
 
                     console.warn(
-                        "CivicAI: Display name update failed:",
+                        "ChronicAI: Display name update failed:",
                         profileError
                     );
                 }
@@ -697,7 +697,7 @@ if (registerForm) {
                 // =================================================
 
                 console.log(
-                    "CivicAI: Saving citizen profile..."
+                    "ChronicAI: Saving citizen profile..."
                 );
 
                 await set(
@@ -709,7 +709,7 @@ if (registerForm) {
                 );
 
                 console.log(
-                    "CivicAI: Citizen profile saved."
+                    "ChronicAI: Citizen profile saved."
                 );
 
                 // =================================================
@@ -725,12 +725,12 @@ if (registerForm) {
                 // =================================================
 
                 localStorage.setItem(
-                    "civicAIRegisteredEmail",
+                    "chronicAIRegisteredEmail",
                     email
                 );
 
                 localStorage.setItem(
-                    "civicAIRegisteredName",
+                    "chronicAIRegisteredName",
                     name
                 );
 
@@ -777,7 +777,7 @@ if (registerForm) {
                 ) {
 
                     console.warn(
-                        "CivicAI: Temporary registration session could not be signed out:",
+                        "ChronicAI: Temporary registration session could not be signed out:",
                         signOutError
                     );
                 }
@@ -801,7 +801,7 @@ if (registerForm) {
             ) {
 
                 console.error(
-                    "CivicAI Registration Error:",
+                    "ChronicAI Registration Error:",
                     error
                 );
 
@@ -856,7 +856,7 @@ console.log(
 );
 
 console.log(
-    "CIVICAI REGISTER MODULE READY"
+    "CHRONICAI REGISTER MODULE READY"
 );
 
 console.log(

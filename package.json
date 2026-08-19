@@ -1,7 +1,7 @@
 {
-  "name": "ChronicAi",
+  "name": "chronicai",
   "version": "1.0.0",
-  "description": "ChronicAi - AI powered civic complaint analysis and authority routing system",
+  "description": "ChronicAI - AI powered civic complaint analysis and authority routing system",
   "type": "module",
   "main": "server.js",
   "scripts": {
@@ -15,8 +15,7 @@
     "express": "^4.22.2",
     "groq-sdk": "^0.15.0",
     "multer": "^2.2.0",
-    "nodemailer": "^9.0.5",
-    "twilio": "^6.1.0"
+    "nodemailer": "^9.0.5"
   },
   "engines": {
     "node": ">=18"

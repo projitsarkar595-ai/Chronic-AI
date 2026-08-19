@@ -2,7 +2,7 @@
 
 
 /* =========================================================
-   Chronicai RESOURCE CENTER
+   CHRONICAI RESOURCE CENTER
 ========================================================= */
 
 
@@ -979,7 +979,7 @@ function updateUserMarker(
 
                 <br><br>
 
-                CivicAI is using this location
+                ChronicAI is using this location
                 for nearby resources and air-quality
                 information.
             `
@@ -1569,8 +1569,8 @@ function renderMarkers() {
 
                     <a
                         target="_blank"
-                        rel="noopener"
-                        href="https://www.google.com/maps/dir/?api=1&destination=${resource.lat},${resource.lng}"
+                        rel="noopener"https://www.google.com/maps/dir/?ap
+                        href="i=1&destination=${resource.lat},${resource.lng}"
                     >
                         Get Directions
                     </a>
@@ -1896,7 +1896,7 @@ function saveLocation(
     try {
 
         localStorage.setItem(
-            "civicai_resource_location",
+            "chronicai_resource_location",
             JSON.stringify(
                 location
             )
@@ -1914,7 +1914,7 @@ function loadSavedLocation() {
 
         const raw =
             localStorage.getItem(
-                "civicai_resource_location"
+                "chronicai_resource_location"
             );
 
 
@@ -1989,7 +1989,7 @@ function saveResources(
     try {
 
         localStorage.setItem(
-            "civicai_resource_cache",
+            "chronicai_resource_cache",
             JSON.stringify(
                 data
             )
@@ -2007,7 +2007,7 @@ function loadCachedResources() {
 
         const raw =
             localStorage.getItem(
-                "civicai_resource_cache"
+                "chronicai_resource_cache"
             );
 
 

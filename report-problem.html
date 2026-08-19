@@ -11,21 +11,16 @@
     content="width=device-width, initial-scale=1.0"
 >
 
-<title>ChronicAi — Report a Problem</title>
+<title>ChronicAI — Report a Problem</title>
 
 <meta
     name="description"
-    content="ChronicAi intelligent civic problem reporting and AI analysis."
->
-<link
-        rel="icon"
-        type="image/svg+xml"
-        href="icon.svg"
+    content="ChronicAI intelligent civic problem reporting and AI analysis."
 >
 <style>
 
     /* =====================================================
-       ChronicAi — REPORT PROBLEM
+       CHRONICAI — REPORT PROBLEM
     ===================================================== */
 
     :root {
@@ -2113,7 +2108,7 @@
         </div>
 
         <div class="loader-text">
-            Loading CivicAI...
+            Loading ChronicAI...
         </div>
 
     </div>
@@ -2139,7 +2134,7 @@
             </div>
 
             <div class="brand-text">
-                Civic<span>AI</span>
+                Chronic<span>AI</span>
             </div>
 
         </a>
@@ -2178,7 +2173,7 @@
 
         <p>
             Describe the problem or upload a photo.
-            CivicAI will analyze what happened, estimate
+            ChronicAI will analyze what happened, estimate
             urgency, identify the appropriate authority,
             and prepare your complaint.
         </p>
@@ -2257,7 +2252,7 @@
         <div class="card-header">
 
             <h2>
-                Tell CivicAI what happened
+                Tell ChronicAI what happened
             </h2>
 
             <p>
@@ -2432,7 +2427,7 @@
                     class="btn btn-primary"
                     id="analyzeButton"
                 >
-                    🤖 Analyze with CivicAI
+                    🤖 Analyze with ChronicAI
                 </button>
 
                 <button
@@ -2464,7 +2459,7 @@
         </div>
 
         <h3>
-            CivicAI is analyzing your report
+            ChronicAI is analyzing your report
         </h3>
 
         <p>
@@ -2493,11 +2488,11 @@
         <div class="card-header">
 
             <h2>
-                🤖 CivicAI Analysis
+                🤖 ChronicAI Analysis
             </h2>
 
             <p>
-                This is what CivicAI understood from
+                This is what ChronicAI understood from
                 your report.
             </p>
 
@@ -2638,7 +2633,7 @@
             <div class="recommendation">
 
                 <strong>
-                    💡 CivicAI Recommendation
+                    💡 ChronicAI Recommendation
                 </strong>
 
                 <p
@@ -2741,7 +2736,7 @@
 
                 <p class="review-note">
                     Please carefully review the complaint
-                    before submitting. CivicAI may assist
+                    before submitting. ChronicAI may assist
                     with drafting, but you remain responsible
                     for confirming that the information is
                     accurate.
@@ -2944,7 +2939,7 @@
         </h2>
 
         <p>
-            Your civic report has been recorded by CivicAI.
+            Your civic report has been recorded by ChronicAI.
             Keep the report ID for future tracking.
         </p>
 
@@ -2952,7 +2947,7 @@
             class="report-id"
             id="reportId"
         >
-            CIVIC-000000
+            CHRONIC-000000
         </div>
 
         <div class="actions"
@@ -2983,7 +2978,7 @@
 
 <footer>
 
-    CivicAI • AI-assisted civic reporting
+    ChronicAI • AI-assisted civic reporting
 
 </footer>
 
@@ -3236,6 +3231,9 @@
             "verifyOtpButton"
         );
 
+    const submitReportButton =
+        verifyOtpButton;
+
     const reportIdElement =
         document.getElementById("reportId");
 
@@ -3268,6 +3266,8 @@
         "email";
 
     let currentReportPayload = null;
+
+    let currentVerificationToken = null;
 
 
     /* =====================================================
@@ -3975,7 +3975,7 @@
 
                 throw new Error(
                     data?.error ||
-                    "CivicAI returned an invalid analysis."
+                    "ChronicAI returned an invalid analysis."
                 );
 
             }
@@ -3989,7 +3989,7 @@
 
             if (
                 currentAnalysis
-                    .isCivicIssue !== true
+                    .isChronicIssue !== true
             ) {
 
                 reportFormCard.style.display =
@@ -4003,7 +4003,7 @@
 
                 showAlert(
                     currentAnalysis.message ||
-                    "CivicAI could not identify a genuine civic issue from the provided information.",
+                    "ChronicAI could not identify a genuine civic issue from the provided information.",
                     "success"
                 );
 
@@ -4081,7 +4081,7 @@
         catch (error) {
 
             console.error(
-                "CivicAI analysis error:",
+                "ChronicAI analysis error:",
                 error
             );
 
@@ -4098,7 +4098,7 @@
 
             showAlert(
                 error?.message ||
-                "Unable to connect to CivicAI."
+                "Unable to connect to ChronicAI."
             );
 
         }
@@ -4139,8 +4139,8 @@
 
         return {
 
-            isCivicIssue:
-                result.isCivicIssue === true ||
+            isChronicIssue:
+                result.isChronicIssue === true ||
                 Boolean(
                     result.category ||
                     result.problemDescription ||
@@ -4568,7 +4568,7 @@ Description:
 
 ${user.description || analysis.summary || "The attached information and photograph provide details regarding the reported civic problem."}
 
-CivicAI Analysis:
+ChronicAI Analysis:
 
 ${analysis.summary || analysis.message || "The available information indicates that this matter should be reviewed by the concerned civic authority."}
 
@@ -4590,7 +4590,7 @@ Location:
 ${location}
 
 Submitted through:
-CivicAI — AI-assisted Civic Reporting System`;
+ChronicAI — AI-assisted Chronic Reporting System`;
 
     }
 
@@ -4630,7 +4630,7 @@ CivicAI — AI-assisted Civic Reporting System`;
 
             if (
                 !currentAnalysis ||
-                currentAnalysis.isCivicIssue !== true
+                currentAnalysis.isChronicIssue !== true
             ) {
 
                 showAlert(
@@ -4760,35 +4760,33 @@ CivicAI — AI-assisted Civic Reporting System`;
             }
 
 
-            /*
-             * IMPORTANT:
-             *
-             * Your current server.js does not have an
-             * OTP endpoint yet.
-             *
-             * Therefore we do not pretend that an OTP
-             * has actually been sent.
-             *
-             * This frontend is ready for:
-             *
-             * POST /api/auth/send-otp
-             *
-             * which will be added to the backend.
-             */
+            // Call backend to send OTP
+            try {
+                const sendOtpResponse = await fetch("/api/auth/send-otp", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        type: selectedVerificationMethod,
+                        identifier: verificationContact.value,
+                    }),
+                });
 
+                const result = await sendOtpResponse.json();
 
-            showAlert(
-                "Verification UI is ready, but your current backend does not yet have a secure OTP endpoint. Add the OTP backend before enabling real submission.",
-                "error"
-            );
-
-
-            /*
-             * TEMPORARILY STOP HERE.
-             *
-             * We deliberately do NOT use a fake OTP such
-             * as 123456 because that would not be secure.
-             */
+                if (result.success) {
+                    showAlert(
+                        `OTP sent successfully to your ${selectedVerificationMethod}. Check your email or SMS for the code.`,
+                        "success"
+                    );
+                    otpArea.classList.add("show");
+                    otpInput.focus();
+                } else {
+                    showAlert(result.error || "Failed to send OTP.", "error");
+                }
+            } catch (error) {
+                console.error("Send OTP error:", error);
+                showAlert("Error sending OTP. Please try again.", "error");
+            }
 
         }
     );
@@ -4801,12 +4799,67 @@ CivicAI — AI-assisted Civic Reporting System`;
     verifyOtpButton.addEventListener(
         "click",
         async () => {
+            // If already verified, submit the report
+            if (currentVerificationToken) {
+                try {
+                    const reportData = await submitReportAfterVerification();
+                    showSuccess(reportData.reportId);
+                } catch (error) {
+                    console.error("Report submission error:", error);
+                    showAlert(error.message || "Failed to submit report.", "error");
+                }
+                return;
+            }
 
-            showAlert(
-                "Real OTP verification must be handled by the backend. This button will connect to /api/auth/verify-otp after the backend endpoint is added.",
-                "error"
-            );
+            // Otherwise, verify the OTP
+            const otp = cleanText(otpInput.value);
 
+            if (!otp || !/^\d{6}$/.test(otp)) {
+                showAlert("Please enter a valid 6-digit OTP.", "error");
+                return;
+            }
+
+            try {
+                const verifyResponse = await fetch("/api/auth/verify-otp", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        type: selectedVerificationMethod,
+                        identifier: verificationContact.value,
+                        otp: otp,
+                    }),
+                });
+
+                let result;
+                try {
+                    result = await verifyResponse.json();
+                } catch (parseError) {
+                    console.error("Failed to parse response:", parseError);
+                    showAlert("Server error. Please try again.", "error");
+                    return;
+                }
+
+                if (result.success && result.verified) {
+                    // Store verification token for report submission
+                    currentVerificationToken = result.verificationToken;
+                    showAlert("✓ Verification successful! Click the button below to submit your report.", "success");
+                    
+                    // Disable OTP input
+                    otpInput.disabled = true;
+                    
+                    // Change button text and behavior
+                    verifyOtpButton.textContent = "📤 Submit Report";
+                    verifyOtpButton.classList.add("verified");
+                } else {
+                    showAlert(
+                        result.error || "OTP verification failed.",
+                        "error"
+                    );
+                }
+            } catch (error) {
+                console.error("Verify OTP error:", error);
+                showAlert("Network error. Please check your connection and try again.", "error");
+            }
         }
     );
 
@@ -4828,6 +4881,28 @@ CivicAI — AI-assisted Civic Reporting System`;
 
         }
 
+        if (
+            !currentVerificationToken
+        ) {
+
+            throw new Error(
+                "Verification token is missing. Please verify your contact before submitting."
+            );
+
+        }
+
+        // Add verification token and verified contact to payload
+        const payloadWithVerification = {
+            ...currentReportPayload,
+            verificationToken: currentVerificationToken
+        };
+
+        // Add the verified contact (email or phone) based on verification method
+        if (selectedVerificationMethod === "email") {
+            payloadWithVerification.email = verificationContact.value;
+        } else if (selectedVerificationMethod === "phone") {
+            payloadWithVerification.phone = verificationContact.value;
+        }
 
         const response =
             await fetch(
@@ -4843,7 +4918,7 @@ CivicAI — AI-assisted Civic Reporting System`;
 
                     body:
                         JSON.stringify(
-                            currentReportPayload
+                            payloadWithVerification
                         )
 
                 }
@@ -5030,3 +5105,5 @@ CivicAI — AI-assisted Civic Reporting System`;
 </body>
 
 </html>
+
+

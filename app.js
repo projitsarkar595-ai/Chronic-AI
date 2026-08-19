@@ -1,8 +1,8 @@
 /* =========================================================
-    Chronicai — MAIN FRONTEND JAVASCRIPT
+   CHRONICAI — MAIN FRONTEND JAVASCRIPT
    Complete Frontend Controller
    UI + Animation + Theme + Navigation
-   +  Chronicai Backend / Groq AI Connection
+   + ChronicAI Backend / Groq AI Connection
 ========================================================= */
 
 "use strict";
@@ -1090,7 +1090,7 @@ document.addEventListener("DOMContentLoaded", () => {
             "click",
             () => {
 
-                openCivicAIHelp();
+                openChronicAIHelp();
 
             }
         );
@@ -1098,7 +1098,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    function openCivicAIHelp() {
+    function openChronicAIHelp() {
 
         const existing =
             document.querySelector(
@@ -1138,7 +1138,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </span>
 
                     <strong>
-                        CivicAI Assistant
+                        ChronicAI Assistant
                     </strong>
 
                 </div>
@@ -1173,7 +1173,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <br><br>
 
                     I can help you understand
-                    CivicAI and guide you through
+                    ChronicAI and guide you through
                     reporting a public problem.
 
                 </p>
@@ -1408,14 +1408,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =====================================================
-       CIVICAI BACKEND CONFIGURATION
+       CHRONICAI BACKEND CONFIGURATION
     ===================================================== */
 
-    const CIVICAI_API_BASE = "";
+    const CHRONICAI_API_BASE = "";
 
 
     /* =====================================================
-       CIVICAI API REQUEST HELPER
+       CHRONICAI API REQUEST HELPER
     ===================================================== */
 
     async function civicAIRequest(
@@ -1424,7 +1424,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ) {
 
         const url =
-            `${CIVICAI_API_BASE}${endpoint}`;
+            `${CHRONICAI_API_BASE}${endpoint}`;
 
 
         const defaultHeaders = {
@@ -1477,7 +1477,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             throw new Error(
                 data?.error ||
-                `CivicAI server error: ${response.status}`
+                `ChronicAI server error: ${response.status}`
             );
 
         }
@@ -1492,7 +1492,7 @@ document.addEventListener("DOMContentLoaded", () => {
        TEST BACKEND CONNECTION
     ===================================================== */
 
-    async function checkCivicAIBackend() {
+    async function checkChronicAIBackend() {
 
         try {
 
@@ -1503,7 +1503,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             console.log(
-                "CivicAI Backend:",
+                "ChronicAI Backend:",
                 data
             );
 
@@ -1513,7 +1513,7 @@ document.addEventListener("DOMContentLoaded", () => {
             ) {
 
                 console.log(
-                    "CivicAI Backend connection successful."
+                    "ChronicAI Backend connection successful."
                 );
 
             }
@@ -1524,13 +1524,13 @@ document.addEventListener("DOMContentLoaded", () => {
             ) {
 
                 console.log(
-                    "CivicAI Groq AI configuration detected."
+                    "ChronicAI Groq AI configuration detected."
                 );
 
             } else {
 
                 console.warn(
-                    "CivicAI backend is online, but GROQ_API_KEY is not configured."
+                    "ChronicAI backend is online, but GROQ_API_KEY is not configured."
                 );
 
             }
@@ -1543,7 +1543,7 @@ document.addEventListener("DOMContentLoaded", () => {
         catch (error) {
 
             console.error(
-                "CivicAI Backend Connection Error:",
+                "ChronicAI Backend Connection Error:",
                 error
             );
 
@@ -1558,12 +1558,12 @@ document.addEventListener("DOMContentLoaded", () => {
     /* =====================================================
        AI ANALYSIS FUNCTION
        
-       Can be used by other CivicAI pages/scripts:
+       Can be used by other ChronicAI pages/scripts:
        
-       window.CivicAI.analyzeReport(...)
+       window.ChronicAI.analyzeReport(...)
     ===================================================== */
 
-    async function analyzeCivicReport({
+    async function analyzeChronicReport({
 
         description = "",
 
@@ -1621,7 +1621,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         console.log(
-            "CivicAI: Sending report to AI..."
+            "ChronicAI: Sending report to AI..."
         );
 
 
@@ -1667,7 +1667,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         console.log(
-            "CivicAI: AI analysis received.",
+            "ChronicAI: AI analysis received.",
             data.analysis
         );
 
@@ -1678,12 +1678,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =====================================================
-       CREATE CIVIC REPORT
+       CREATE CHRONIC REPORT
        
        Can be used by report/citizen page.
     ===================================================== */
 
-    async function createCivicReport({
+    async function createChronicReport({
 
         reporterName = "",
 
@@ -1724,7 +1724,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         console.log(
-            "CivicAI: Saving civic report..."
+            "ChronicAI: Saving civic report..."
         );
 
 
@@ -1780,7 +1780,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         console.log(
-            "CivicAI: Report saved successfully.",
+            "ChronicAI: Report saved successfully.",
             data.reportId
         );
 
@@ -1791,13 +1791,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =====================================================
-       LOAD ALL CIVIC REPORTS
+       LOAD ALL CHRONIC REPORTS
     ===================================================== */
 
-    async function loadCivicReports() {
+    async function loadChronicReports() {
 
         console.log(
-            "CivicAI: Loading reports..."
+            "ChronicAI: Loading reports..."
         );
 
 
@@ -1825,10 +1825,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =====================================================
-       LOAD SINGLE CIVIC REPORT
+       LOAD SINGLE CHRONIC REPORT
     ===================================================== */
 
-    async function loadCivicReport(
+    async function loadChronicReport(
         reportId
     ) {
 
@@ -1871,10 +1871,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =====================================================
-       UPDATE CIVIC REPORT STATUS
+       UPDATE CHRONIC REPORT STATUS
     ===================================================== */
 
-    async function updateCivicReportStatus({
+    async function updateChronicReportStatus({
 
         reportId,
 
@@ -1955,10 +1955,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =====================================================
-       ESCALATE CIVIC REPORT
+       ESCALATE CHRONIC REPORT
     ===================================================== */
 
-    async function escalateCivicReport({
+    async function escalateChronicReport({
 
         reportId,
 
@@ -2025,7 +2025,7 @@ document.addEventListener("DOMContentLoaded", () => {
        LOAD REPORT TIMELINE
     ===================================================== */
 
-    async function loadCivicReportTimeline(
+    async function loadChronicReportTimeline(
         reportId
     ) {
 
@@ -2068,47 +2068,47 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* =====================================================
-       GLOBAL CIVICAI API
+       GLOBAL CHRONICAI API
        
        Other JS files can use:
        
-       window.CivicAI.analyzeReport()
-       window.CivicAI.createReport()
-       window.CivicAI.getReports()
+       window.ChronicAI.analyzeReport()
+       window.ChronicAI.createReport()
+       window.ChronicAI.getReports()
        etc.
     ===================================================== */
 
-    window.CivicAI = {
+    window.ChronicAI = {
 
         apiBase:
-            CIVICAI_API_BASE,
+            CHRONICAI_API_BASE,
 
         request:
             civicAIRequest,
 
         checkBackend:
-            checkCivicAIBackend,
+            checkChronicAIBackend,
 
         analyzeReport:
-            analyzeCivicReport,
+            analyzeChronicReport,
 
         createReport:
-            createCivicReport,
+            createChronicReport,
 
         getReports:
-            loadCivicReports,
+            loadChronicReports,
 
         getReport:
-            loadCivicReport,
+            loadChronicReport,
 
         updateStatus:
-            updateCivicReportStatus,
+            updateChronicReportStatus,
 
         escalateReport:
-            escalateCivicReport,
+            escalateChronicReport,
 
         getTimeline:
-            loadCivicReportTimeline
+            loadChronicReportTimeline
 
     };
 
@@ -2120,7 +2120,7 @@ document.addEventListener("DOMContentLoaded", () => {
        Does NOT break frontend if backend is unavailable.
     ===================================================== */
 
-    checkCivicAIBackend();
+    checkChronicAIBackend();
 
 
     /* =====================================================
@@ -2242,7 +2242,7 @@ document.addEventListener("DOMContentLoaded", () => {
         (event) => {
 
             console.warn(
-                "CivicAI frontend warning:",
+                "ChronicAI frontend warning:",
                 event.message
             );
 
@@ -2259,7 +2259,7 @@ document.addEventListener("DOMContentLoaded", () => {
         (event) => {
 
             console.warn(
-                "CivicAI unhandled promise:",
+                "ChronicAI unhandled promise:",
                 event.reason
             );
 
@@ -2299,7 +2299,7 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
     console.log(
-        "CIVICAI FRONTEND INITIALIZED 🚀"
+        "CHRONICAI FRONTEND INITIALIZED 🚀"
     );
 
     console.log(
@@ -2319,7 +2319,7 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
     console.log(
-        "CivicAI API Controller: READY"
+        "ChronicAI API Controller: READY"
     );
 
     console.log(

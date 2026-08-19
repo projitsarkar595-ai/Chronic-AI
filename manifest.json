@@ -1,10 +1,7 @@
 {
-  "name": "ChronicAi",
-  "short_name": "ChronicAi",
-  "short_name": "Civi",
-  "description": "AI-powered citizen-government connection for ChronicAi",
-  "short_name": "ChronicAi",
-  "short_name": "ChronicAi reporting and support.",
+  "name": "ChronicAI",
+  "short_name": "ChronicAI",
+  "description": "AI-powered citizen-government connection for Civic reporting and support.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#07111f",

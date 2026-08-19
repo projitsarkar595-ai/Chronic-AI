@@ -1,5 +1,5 @@
 // ============================================================
-// CIVICAI — MAIN FRONTEND APPLICATION
+// CHRONICAI — MAIN FRONTEND APPLICATION
 // ============================================================
 // Handles:
 // ------------------------------------------------------------
@@ -10,7 +10,7 @@
 // 5. User Profile Display
 // 6. Protected Pages
 // 7. Report Problem
-// 8. AI Civic Analysis
+// 8. AI Chronic Analysis
 // 9. Citizen Verification
 // 10. Report Submission
 // 11. Report Status
@@ -114,31 +114,31 @@ const API_BASE =
 const SESSION_KEYS = {
 
     user:
-        "civicAIUser",
+        "chronicAIUser",
 
     loggedIn:
-        "civicAILoggedIn",
+        "chronicAILoggedIn",
 
     userId:
-        "civicAIUserId",
+        "chronicAIUserId",
 
     userEmail:
-        "civicAIUserEmail",
+        "chronicAIUserEmail",
 
     userName:
-        "civicAIUserName",
+        "chronicAIUserName",
 
     role:
-        "civicAIRole",
+        "chronicAIRole",
 
     lastReport:
-        "civicAILastReport",
+        "chronicAILastReport",
 
     currentAnalysis:
-        "civicAICurrentAnalysis",
+        "chronicAICurrentAnalysis",
 
     theme:
-        "civicAITheme"
+        "chronicAITheme"
 
 };
 
@@ -400,7 +400,7 @@ function showToast(
 ) {
 
     let toast =
-        $("civicToast");
+        $("chronicToast");
 
     if (!toast) {
 
@@ -410,10 +410,10 @@ function showToast(
             );
 
         toast.id =
-            "civicToast";
+            "chronicToast";
 
         toast.className =
-            "civic-toast";
+            "chronic-toast";
 
         document.body.appendChild(
             toast
@@ -738,7 +738,7 @@ async function fetchUserProfile(
     ) {
 
         console.error(
-            "CivicAI: Profile load failed:",
+            "ChronicAI: Profile load failed:",
             error
         );
 
@@ -932,7 +932,7 @@ function setupAuthNavigation() {
                     () => {
 
                         console.log(
-                            "CivicAI: Opening registration."
+                            "ChronicAI: Opening registration."
                         );
 
                     }
@@ -984,7 +984,7 @@ async function logoutUser() {
     ) {
 
         console.error(
-            "CivicAI Logout Error:",
+            "ChronicAI Logout Error:",
             error
         );
 
@@ -1214,7 +1214,7 @@ async function apiRequest(
 }
 
 // ============================================================
-// ANALYZE CIVIC REPORT
+// ANALYZE CHRONIC REPORT
 // ============================================================
 
 async function analyzeReport({
@@ -1702,7 +1702,7 @@ function setupReportForm() {
 
                     showMessage(
                         message,
-                        "CivicAI is analyzing your report..."
+                        "ChronicAI is analyzing your report..."
                     );
 
                     let image =
@@ -1771,7 +1771,7 @@ function setupReportForm() {
                 ) {
 
                     console.error(
-                        "CivicAI Analyze Error:",
+                        "ChronicAI Analyze Error:",
                         error
                     );
 
@@ -2027,7 +2027,7 @@ function setupReportForm() {
                 ) {
 
                     console.error(
-                        "CivicAI Report Submission Error:",
+                        "ChronicAI Report Submission Error:",
                         error
                     );
 
@@ -2411,7 +2411,7 @@ async function loadMyReports() {
     ) {
 
         console.error(
-            "CivicAI: My reports error:",
+            "ChronicAI: My reports error:",
             error
         );
 
@@ -2671,7 +2671,7 @@ async function initializeReportStatusPage() {
     ) {
 
         console.error(
-            "CivicAI Status Page Error:",
+            "ChronicAI Status Page Error:",
             error
         );
 
@@ -2868,7 +2868,7 @@ async function loadAdminReports() {
     ) {
 
         console.error(
-            "CivicAI Admin Reports Error:",
+            "ChronicAI Admin Reports Error:",
             error
         );
 
@@ -3143,7 +3143,7 @@ async function checkBackendHealth() {
             );
 
         console.log(
-            "CivicAI Backend:",
+            "ChronicAI Backend:",
             result?.status ||
             "online"
         );
@@ -3154,7 +3154,7 @@ async function checkBackendHealth() {
         ) {
 
             console.warn(
-                "CivicAI: GROQ_API_KEY is not configured on the server."
+                "ChronicAI: GROQ_API_KEY is not configured on the server."
             );
 
         }
@@ -3168,7 +3168,7 @@ async function checkBackendHealth() {
     ) {
 
         console.warn(
-            "CivicAI Backend is unavailable:",
+            "ChronicAI Backend is unavailable:",
             error.message
         );
 
@@ -3420,7 +3420,7 @@ function initializeAuth() {
                     ) {
 
                         console.log(
-                            "CivicAI Auth:",
+                            "ChronicAI Auth:",
                             "Logged in",
                             user.email
                         );
@@ -3495,7 +3495,7 @@ function initializeAuth() {
                     else {
 
                         console.log(
-                            "CivicAI Auth:",
+                            "ChronicAI Auth:",
                             "Logged out"
                         );
 
@@ -3645,7 +3645,7 @@ function setupConnectionStatus() {
         () => {
 
             showToast(
-                "You are offline. Some CivicAI features may not work.",
+                "You are offline. Some ChronicAI features may not work.",
                 "error"
             );
 
@@ -3679,20 +3679,20 @@ function setupVisibilityRefresh() {
 }
 
 // ============================================================
-// GLOBAL CIVICAI API
+// GLOBAL CHRONICAI API
 // ============================================================
 //
 // Other page-specific JS files can use:
 //
-// CivicAI.user()
-// CivicAI.analyzeReport()
-// CivicAI.loadReport()
-// CivicAI.logout()
-// CivicAI.showToast()
+// ChronicAI.user()
+// ChronicAI.analyzeReport()
+// ChronicAI.loadReport()
+// ChronicAI.logout()
+// ChronicAI.showToast()
 //
 // ============================================================
 
-window.CivicAI = {
+window.ChronicAI = {
 
     get user() {
 
@@ -3801,7 +3801,7 @@ async function initializeApp() {
     );
 
     console.log(
-        "CIVICAI MAIN APPLICATION STARTING"
+        "CHRONICAI MAIN APPLICATION STARTING"
     );
 
     console.log(
@@ -3878,7 +3878,7 @@ async function initializeApp() {
     hidePageLoader();
 
     document.body.classList.add(
-        "civicai-ready"
+        "chronicai-ready"
     );
 
     console.log(
@@ -3886,7 +3886,7 @@ async function initializeApp() {
     );
 
     console.log(
-        "CIVICAI MAIN APPLICATION READY"
+        "CHRONICAI MAIN APPLICATION READY"
     );
 
     console.log(

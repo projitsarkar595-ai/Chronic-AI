@@ -1,5 +1,5 @@
 // ============================================================
-//  Chronicai — BACKEND SERVER
+// CHRONICAI — BACKEND SERVER
 // Express + Groq AI
 // Civic Report Analysis
 // Authority Routing
@@ -207,7 +207,7 @@ function saveReports(reports) {
 function generateReportId() {
 
     return (
-        "CIVIC-" +
+        "CHRONIC-" +
         Date.now() +
         "-" +
         Math.floor(
@@ -575,7 +575,7 @@ async function callGroqAI({
     // ========================================================
 
     const systemPrompt = `
-You are CivicAI, an intelligent civic problem analysis assistant.
+You are ChronicAI, an intelligent civic problem analysis assistant.
 
 Analyze citizen civic complaints.
 
@@ -971,7 +971,7 @@ app.get(
                 "online",
 
             service:
-                "CivicAI",
+                "ChronicAI",
 
             aiConfigured:
                 Boolean(
@@ -1049,7 +1049,7 @@ app.get(
                                             "user",
 
                                         content:
-                                            "Reply with exactly: CivicAI Groq connection successful."
+                                            "Reply with exactly: ChronicAI Groq connection successful."
                                     }
 
                                 ],
@@ -1177,7 +1177,7 @@ app.get(
                 true,
 
             message:
-                "CivicAI backend API is running.",
+                "ChronicAI backend API is running.",
 
             endpoints: {
 
@@ -1460,10 +1460,10 @@ app.post(
                         "AI Analyzed",
 
                     message:
-                        "CivicAI analyzed the report.",
+                        "ChronicAI analyzed the report.",
 
                     actor:
-                        "CivicAI",
+                        "ChronicAI",
 
                     timestamp:
                         createdAt
@@ -1485,7 +1485,7 @@ app.post(
                         `Recommended authority: ${normalized.responsibleAuthority}`,
 
                     actor:
-                        "CivicAI",
+                        "ChronicAI",
 
                     timestamp:
                         createdAt
@@ -2218,7 +2218,7 @@ function checkSlaAndEscalate() {
                         "SLA deadline exceeded. Report automatically escalated.",
 
                     actor:
-                        "CivicAI SLA System",
+                        "ChronicAI SLA System",
 
                     timestamp:
                         breachTime
@@ -2428,7 +2428,7 @@ app.use(
         return res
             .status(404)
             .send(
-                "CivicAI: Page not found."
+                "ChronicAI: Page not found."
             );
     }
 );
@@ -2485,7 +2485,7 @@ app.listen(
         );
 
         console.log(
-            "          CIVICAI BACKEND SERVER"
+            "          CHRONICAI BACKEND SERVER"
         );
 
         console.log(

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 
-<title>CivicAI — AI Life Helper</title>
+<title>ChronicAI — AI Life Helper</title>
 
 <link
     rel="stylesheet"
@@ -449,7 +449,7 @@ button{
         );
 
     -webkit-background-clip:text;
-
+    background-clip:text;
     color:transparent;
 }
 
@@ -1410,7 +1410,7 @@ button{
             </div>
 
             <div class="logo-text">
-                Civic<span>AI</span>
+                Chronic<span>AI</span>
             </div>
 
         </div>
@@ -1490,7 +1490,7 @@ button{
                 <div>
 
                     <div class="header-title">
-                        CivicAI Life Helper
+                        ChronicAI Life Helper
                     </div>
 
                     <div class="status">
@@ -1553,7 +1553,7 @@ button{
                     </h1>
 
                     <p>
-                        CivicAI is your AI life helper.
+                        ChronicAI is your AI life helper.
                         Ask questions, speak naturally,
                         upload an image, or use Voice Assistant
                         for a hands-free conversation.
@@ -1620,7 +1620,7 @@ button{
 
 
             <div class="assistant-label">
-                <b>CivicAI Assistant</b>
+                <b>ChronicAI Assistant</b>
             </div>
 
 
@@ -1723,7 +1723,7 @@ button{
                         class="chat-input"
                         id="chatInput"
                         rows="1"
-                        placeholder="Message CivicAI..."
+                        placeholder="Message ChronicAI..."
                     ></textarea>
 
 
@@ -1740,7 +1740,7 @@ button{
 
 
                 <div class="input-footer">
-                    CivicAI can make mistakes.
+                    ChronicAI can make mistakes.
                     Verify important information when necessary.
                 </div>
 
@@ -1772,7 +1772,7 @@ button{
 document.addEventListener("DOMContentLoaded", () => {
 
     /* =========================================================
-       CIVICAI LIFE HELPER
+       CHRONICAI LIFE HELPER
        COMPLETE CORRECTED VERSION
 
        FIXED:
@@ -1866,9 +1866,9 @@ document.addEventListener("DOMContentLoaded", () => {
        STORAGE
     ========================================================= */
 
-    const STORAGE_MESSAGES = "civicai_messages";
-    const STORAGE_RECENT = "civicai_recent";
-    const STORAGE_THEME = "civicai_theme";
+    const STORAGE_MESSAGES = "chronicai_messages";
+    const STORAGE_RECENT = "chronicai_recent";
+    const STORAGE_THEME = "chronicai_theme";
 
 
     /* =========================================================
@@ -2589,7 +2589,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             location: "",
 
                             reporterName:
-                                "CivicAI User",
+                                "ChronicAI User",
 
                             image
 
@@ -2826,14 +2826,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             console.error(
-                "CivicAI chat error:",
+                "ChronicAI chat error:",
                 error
             );
 
 
             renderMessage(
                 "ai",
-                "**CivicAI couldn't process your request.**\n\n" +
+                "**ChronicAI couldn't process your request.**\n\n" +
                 (
                     error?.message ||
                     "Unknown AI error."
@@ -4397,7 +4397,7 @@ document.addEventListener("DOMContentLoaded", () => {
             formData.append(
                 "audio",
                 blob,
-                `civicai-voice.${extension}`
+                `chronicai-voice.${extension}`
             );
 
 
@@ -5227,7 +5227,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                 (
                                     message.role === "user"
                                         ? "You"
-                                        : "CivicAI"
+                                        : "ChronicAI"
                                 ) +
                                 ": " +
                                 message.content
@@ -5505,7 +5505,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     console.log(
-        "CivicAI Life Helper initialized."
+        "ChronicAI Life Helper initialized."
     );
 
 
@@ -5540,7 +5540,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 /* =============================================================
-   CIVICAI ASSISTANT — DRAG ANYWHERE
+   CHRONICAI ASSISTANT — DRAG ANYWHERE
    ============================================================= */
 
 (function setupAssistantDrag() {
@@ -5555,7 +5555,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     const STORAGE_KEY =
-        "civicai_assistant_position_v4";
+        "chronicai_assistant_position_v4";
 
 
     let dragging = false;

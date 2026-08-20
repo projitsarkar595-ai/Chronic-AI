@@ -71,6 +71,11 @@ const DATA_DIR =
 const REPORTS_FILE =
     path.join(DATA_DIR, "reports.json");
 
+const liveJourneys = new Map();
+
+const LIVE_JOURNEY_TTL_MS =
+    2 * 60 * 1000;
+
 if (!fs.existsSync(DATA_DIR)) {
 
     fs.mkdirSync(
@@ -132,6 +137,14 @@ function cleanText(value) {
     }
 
     return String(value).trim();
+
+}
+
+function isValidJourneyId(value) {
+
+    return /^SJ-[A-Z0-9]{5}-[A-Z0-9]{5}$/.test(
+        cleanText(value).toUpperCase()
+    );
 
 }
 
@@ -3432,7 +3445,7 @@ function normalizeEmail(value) {
 // ============================================================
 //
 // Frontend should preferably send:
-// +919876543210
+// +918013593509
 //
 // We keep +, digits only.
 // ============================================================
@@ -5578,7 +5591,7 @@ app.post(
             if (emailTransporter && ADMIN_EMAIL) {
                 try {
                     const reportUrl = `${APP_BASE_URL}/api/reports/${report.reportId}`;
-                    
+                    ydf
                     const adminEmailText = `
 
 NEW CHRONICAI CIVIC REPORT SUBMITTED
@@ -5763,6 +5776,115 @@ app.get(
 
             reports
 
+        });
+
+    }
+);
+
+// ============================================================
+// LIVE JOURNEY LOCATION
+// ============================================================
+
+app.post(
+    "/api/journeys/:journeyId/location",
+    (req, res) => {
+
+        const journeyId =
+            cleanText(req.params.journeyId).toUpperCase();
+
+        const latitude =
+            Number(req.body?.latitude);
+
+        const longitude =
+            Number(req.body?.longitude);
+
+        const accuracy =
+            Number(req.body?.accuracy || 0);
+
+        if (
+            !isValidJourneyId(journeyId) ||
+            !Number.isFinite(latitude) ||
+            !Number.isFinite(longitude) ||
+            latitude < -90 ||
+            latitude > 90 ||
+            longitude < -180 ||
+            longitude > 180
+        ) {
+            return res.status(400).json({
+                success: false,
+                error: "Invalid journey location."
+            });
+        }
+
+        liveJourneys.set(journeyId, {
+            latitude,
+            longitude,
+            accuracy: Number.isFinite(accuracy) ? accuracy : 0,
+            updatedAt: new Date().toISOString()
+        });
+
+        return res.json({
+            success: true
+        });
+
+    }
+);
+
+app.get(
+    "/api/journeys/:journeyId/location",
+    (req, res) => {
+
+        const journeyId =
+            cleanText(req.params.journeyId).toUpperCase();
+
+        if (!isValidJourneyId(journeyId)) {
+            return res.status(400).json({
+                success: false,
+                error: "Invalid Journey ID."
+            });
+        }
+
+        const location =
+            liveJourneys.get(journeyId);
+
+        if (
+            !location ||
+            Date.now() - new Date(location.updatedAt).getTime() > LIVE_JOURNEY_TTL_MS
+        ) {
+            liveJourneys.delete(journeyId);
+
+            return res.status(404).json({
+                success: false,
+                error: "Live location is not available."
+            });
+        }
+
+        return res.json({
+            success: true,
+            location
+        });
+
+    }
+);
+
+app.delete(
+    "/api/journeys/:journeyId/location",
+    (req, res) => {
+
+        const journeyId =
+            cleanText(req.params.journeyId).toUpperCase();
+
+        if (!isValidJourneyId(journeyId)) {
+            return res.status(400).json({
+                success: false,
+                error: "Invalid Journey ID."
+            });
+        }
+
+        liveJourneys.delete(journeyId);
+
+        return res.json({
+            success: true
         });
 
     }

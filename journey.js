@@ -51,6 +51,12 @@ let connectedParentJourneyId = null;
 
 let lastLocationTime = null;
 
+let liveLocationPollInterval = null;
+
+const JOURNEY_API_BASE =
+    window.CHRONICAI_API_URL ||
+    "";
+
 
 /* ============================================================
    HELPER
@@ -1264,6 +1270,13 @@ function updateLocation(
         accuracy
     );
 
+    publishLiveLocation(
+        journeyId,
+        latitude,
+        longitude,
+        accuracy
+    );
+
 
     /*
      * ========================================================
@@ -2310,6 +2323,8 @@ function stopJourney() {
 
     }
 
+    clearLiveLocation(journeyId);
+
 
     stopJourneyTimer();
 
@@ -2832,6 +2847,10 @@ function connectParentJourney() {
     connectedParentJourneyId =
         enteredId;
 
+    startLiveLocationPolling(
+        enteredId
+    );
+
 
     if (childJourneyId) {
 
@@ -2907,6 +2926,104 @@ function connectParentJourney() {
         "Parent connection established.",
         "✓"
     );
+
+}
+
+
+async function publishLiveLocation(
+    currentJourneyId,
+    latitude,
+    longitude,
+    accuracy
+) {
+
+    if (!currentJourneyId || !journeyActive) {
+        return;
+    }
+
+    try {
+        await fetch(
+            `${JOURNEY_API_BASE}/api/journeys/${encodeURIComponent(currentJourneyId)}/location`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    latitude,
+                    longitude,
+                    accuracy
+                })
+            }
+        );
+    } catch (error) {
+        console.warn("Live location publish failed:", error);
+    }
+
+}
+
+function clearLiveLocation(currentJourneyId) {
+
+    if (!currentJourneyId) {
+        return;
+    }
+
+    fetch(
+        `${JOURNEY_API_BASE}/api/journeys/${encodeURIComponent(currentJourneyId)}/location`,
+        {
+            method: "DELETE"
+        }
+    ).catch((error) => {
+        console.warn("Live location cleanup failed:", error);
+    });
+
+}
+
+function startLiveLocationPolling(parentId) {
+
+    stopLiveLocationPolling();
+
+    const updateParentLocation = async () => {
+
+        try {
+            const response = await fetch(
+                `${JOURNEY_API_BASE}/api/journeys/${encodeURIComponent(parentId)}/location`
+            );
+
+            if (!response.ok) {
+                throw new Error("Live location unavailable.");
+            }
+
+            const data = await response.json();
+            const location = data.location;
+
+            if (parentLocation && location) {
+                parentLocation.textContent =
+                    `${Number(location.latitude).toFixed(6)}, ${Number(location.longitude).toFixed(6)}`;
+            }
+        } catch {
+            if (parentLocation) {
+                parentLocation.textContent =
+                    "Waiting for live location";
+            }
+        }
+
+    };
+
+    updateParentLocation();
+    liveLocationPollInterval = setInterval(
+        updateParentLocation,
+        5000
+    );
+
+}
+
+function stopLiveLocationPolling() {
+
+    if (liveLocationPollInterval !== null) {
+        clearInterval(liveLocationPollInterval);
+        liveLocationPollInterval = null;
+    }
 
 }
 

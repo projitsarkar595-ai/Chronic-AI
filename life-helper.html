@@ -1915,6 +1915,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let speechGeneration = 0;
 
     let isSpeaking = false;
+    let speechOutputActive = false;
+    let stopCommandRecognition = null;
+    let stopCommandListening = false;
 
 
     /* =========================================================
@@ -2673,6 +2676,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 chatInput?.value || ""
             ).trim();
 
+        if (isStopCommand(text)) {
+
+            stopSpeechOutput();
+
+            if (chatInput) {
+
+                chatInput.value = "";
+                resize();
+
+            }
+
+            updateVoiceUI("Voice output stopped");
+            return;
+
+        }
+
 
         const file =
             selectedFile;
@@ -3386,6 +3405,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!clean) return;
 
 
+        speechOutputActive = true;
+
+
         speechGeneration++;
 
         const generation =
@@ -3409,6 +3431,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const finalLanguage =
             normalizeLanguage(language) ||
             detectLanguageFromText(clean);
+
+        startStopCommandListener(finalLanguage);
 
 
         speakNext(
@@ -3438,6 +3462,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!voiceMode) {
 
+            speechOutputActive = false;
+
             stopSpeakingUI();
 
             return;
@@ -3447,7 +3473,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!speechQueue.length) {
 
+            speechOutputActive = false;
+
             stopSpeakingUI();
+
+            restartMicrophone();
 
             /*
                IMPORTANT:
@@ -3584,7 +3614,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 error
             );
 
+            speechOutputActive = false;
+
             stopSpeakingUI();
+
+            restartMicrophone();
 
         }
 
@@ -3602,6 +3636,137 @@ document.addEventListener("DOMContentLoaded", () => {
         voiceWave?.classList.remove(
             "show"
         );
+
+    }
+
+
+    function isStopCommand(text) {
+
+        const normalized = String(text || "")
+            .toLowerCase()
+            .replace(/[^\w\s\u0980-\u09FF\u0900-\u097F]/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        return /^(please\s+)?(stop|stop\s+speaking|stop\s+talking|be\s+quiet|quiet|cancel|থামো|থামুন|বন্ধ\s+করো|বন্ধ\s+করুন)$/.test(normalized);
+
+    }
+
+
+    function stopSpeechOutput() {
+
+        speechOutputActive = false;
+        speechGeneration++;
+        speechQueue = [];
+
+        if ("speechSynthesis" in window) {
+
+            try {
+
+                speechSynthesis.cancel();
+
+            } catch {}
+
+        }
+
+        stopSpeakingUI();
+
+        if (stopCommandRecognition) {
+
+            try {
+
+                stopCommandRecognition.stop();
+
+            } catch {}
+
+        }
+
+        if (voiceMode) {
+
+            restartMicrophone();
+
+        }
+
+    }
+
+
+    function startStopCommandListener(language) {
+
+        const Recognition =
+            window.SpeechRecognition ||
+            window.webkitSpeechRecognition;
+
+        if (
+            !Recognition ||
+            stopCommandListening
+        ) {
+
+            return;
+
+        }
+
+        try {
+
+            const recognition = new Recognition();
+
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = normalizeLanguage(language) || "en-IN";
+
+            recognition.onstart = () => {
+
+                stopCommandListening = true;
+
+            };
+
+            recognition.onresult = event => {
+
+                for (
+                    let index = event.resultIndex;
+                    index < event.results.length;
+                    index++
+                ) {
+
+                    const transcript =
+                        event.results[index][0]?.transcript || "";
+
+                    if (isStopCommand(transcript)) {
+
+                        stopSpeechOutput();
+                        return;
+
+                    }
+
+                }
+
+            };
+
+            recognition.onerror = () => {
+
+                stopCommandListening = false;
+
+            };
+
+            recognition.onend = () => {
+
+                stopCommandListening = false;
+
+                if (voiceMode && speechOutputActive) {
+
+                    startStopCommandListener(language);
+
+                }
+
+            };
+
+            stopCommandRecognition = recognition;
+            recognition.start();
+
+        } catch {
+
+            stopCommandListening = false;
+
+        }
 
     }
 
@@ -4284,6 +4449,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (voiceMode) {
 
+                if (speechOutputActive) {
+
+                    return;
+
+                }
+
                 restartMicrophone();
 
             }
@@ -4493,6 +4664,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
             }
 
+            if (isStopCommand(transcript)) {
+
+                stopSpeechOutput();
+
+                if (chatInput) {
+
+                    chatInput.value = "";
+                    resize();
+
+                }
+
+                updateVoiceUI("Voice output stopped");
+                return;
+
+            }
+
 
             /*
                LANGUAGE
@@ -4584,6 +4771,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (voiceMode) {
 
+                if (speechOutputActive) {
+
+                    return;
+
+                }
+
                 restartMicrophone();
 
             } else {
@@ -4625,6 +4818,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (
                 voiceMode &&
+                !speechOutputActive &&
                 !microphoneStarting &&
                 !recordingActive &&
                 !processingVoice
@@ -4970,12 +5164,7 @@ document.addEventListener("DOMContentLoaded", () => {
         voiceMode =
             false;
 
-
-        speechGeneration++;
-
-
-        speechQueue =
-            [];
+        stopSpeechOutput();
 
 
         if (
